@@ -143,19 +143,17 @@ export function NowPlayingPanel({ open, onClose }: { open: boolean; onClose: () 
         open ? "translate-y-0" : "translate-y-full",
         open ? "pointer-events-auto" : "pointer-events-none",
       ].join(" ")}
+      style={{ paddingTop: "max(32px, env(safe-area-inset-top, 0px))" }}
     >
 
-      {/* Top bar — large tap target on the close button */}
+      {/* Top bar — close button uses both onPointerUp + onClick for max
+          mobile compatibility; the AVD's onClick handling can be flaky. */}
       <div className="relative z-10 flex items-center justify-between px-3 pt-2 pb-2 shrink-0">
         <button
           type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log("[NowPlayingPanel] close tapped");
-            onClose();
-          }}
-          className="relative z-10 flex h-12 w-12 items-center justify-center rounded-full text-zinc-300 active:bg-zinc-800 active:text-white transition-colors"
+          onPointerUp={onClose}
+          onClick={onClose}
+          className="relative z-50 flex h-12 w-12 items-center justify-center rounded-full bg-white/5 text-zinc-200 active:bg-white/15 transition-colors"
           aria-label="Close now playing"
           style={{ touchAction: "manipulation" }}
         >

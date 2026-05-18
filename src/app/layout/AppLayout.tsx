@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { App as CapacitorApp } from "@capacitor/app";
 import { LocalLibrarySection } from "../../features/library/components/LocalLibrarySection";
 import { ImportFab } from "../../features/library/components/ImportFab";
 import { QueueSection } from "../../features/library/components/QueueSection";
@@ -59,6 +60,33 @@ export default function AppLayout() {
   useEffect(() => {
     if (activeView === "settings") mainRef.current?.scrollTo({ top: 0 });
   }, [activeView]);
+
+  // Android hardware back button.
+  // Priority: close NowPlayingPanel → close create-playlist modal →
+  // exit playlist-detail → exit app. Mirrors typical Android nav stack
+  // behaviour and gives the user a guaranteed way out of NowPlayingPanel
+  // even if the on-screen close button is somehow non-tappable.
+  useEffect(() => {
+    const handle = CapacitorApp.addListener("backButton", () => {
+      if (isNowPlayingOpen) {
+        setIsNowPlayingOpen(false);
+        return;
+      }
+      if (isCreateModalOpen) {
+        setIsCreateModalOpen(false);
+        return;
+      }
+      if (activeView === "playlist-detail") {
+        handleBackFromPlaylist();
+        return;
+      }
+      void CapacitorApp.exitApp();
+    });
+    return () => {
+      void handle.then((h) => h.remove());
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNowPlayingOpen, isCreateModalOpen, activeView]);
 
   useEffect(() => {
     if (!navigator.mediaSession) return

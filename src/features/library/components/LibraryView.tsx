@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { useAppStore } from "../../../app/store/useAppStore";
 import { localPathToFileUri } from "../../../shared/utils/local-file-uri";
 import { useTranslation } from "../../../shared/i18n/useTranslation";
@@ -27,14 +28,56 @@ function IconMusic() {
   );
 }
 
+/** Pixels of scroll before the playlists row collapses. */
+const COLLAPSE_AT = 24;
+
 export function LibraryView({ onToast, onPlaylistSelect, onCreatePlaylist }: LibraryViewProps) {
   const t = useTranslation();
   const playlists = useAppStore((s) => s.playlists);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [collapsed, setCollapsed] = useState(false);
+
+  // Watch the closest scrollable ancestor (the AppLayout <main>) so the
+  // playlists row hides smoothly when the user starts browsing the library.
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+
+    let scroller: HTMLElement | Window = window;
+    let parent = el.parentElement;
+    while (parent) {
+      const style = getComputedStyle(parent);
+      if (style.overflowY === "auto" || style.overflowY === "scroll") {
+        scroller = parent;
+        break;
+      }
+      parent = parent.parentElement;
+    }
+
+    const onScroll = () => {
+      const top = scroller instanceof Window ? window.scrollY : scroller.scrollTop;
+      setCollapsed(top > COLLAPSE_AT);
+    };
+    onScroll();
+    scroller.addEventListener("scroll", onScroll, { passive: true });
+    return () => scroller.removeEventListener("scroll", onScroll);
+  }, []);
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Playlists row */}
-      <section className="-mx-4 px-4">
+    <div ref={rootRef} className="flex flex-col">
+      {/* Playlists row — collapses on scroll */}
+      <section
+        aria-hidden={collapsed}
+        className="-mx-4 px-4"
+        style={{
+          maxHeight: collapsed ? 0 : 200,
+          opacity: collapsed ? 0 : 1,
+          marginBottom: collapsed ? 0 : 16,
+          overflow: "hidden",
+          transition: "max-height 0.28s ease, opacity 0.18s ease, margin-bottom 0.28s ease",
+          pointerEvents: collapsed ? "none" : undefined,
+        }}
+      >
         <div className="mb-2 flex items-baseline justify-between">
           <h2 className="text-xs font-medium uppercase tracking-widest text-zinc-500">
             {t.playlists}

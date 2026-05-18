@@ -7,7 +7,7 @@ import { formatMsToClock } from "../../../shared/utils/format-time";
 
 function IconChevronDown() {
   return (
-    <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
+    <svg width="24" height="24" viewBox="0 0 16 16" fill="currentColor">
       <path d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
     </svg>
   );
@@ -138,24 +138,31 @@ export function NowPlayingPanel({ open, onClose }: { open: boolean; onClose: () 
   return (
     <div
       className={[
-        "absolute inset-0 z-20 flex flex-col bg-zinc-950 rounded-xl overflow-hidden",
+        "absolute inset-0 z-40 flex flex-col bg-zinc-950 overflow-hidden",
         "transition-transform duration-300 ease-in-out",
         open ? "translate-y-0" : "translate-y-full",
+        open ? "pointer-events-auto" : "pointer-events-none",
       ].join(" ")}
     >
 
-      {/* Top bar */}
-      <div className="flex items-center justify-between px-6 pt-5 pb-2 shrink-0">
+      {/* Top bar — large tap target on the close button */}
+      <div className="relative z-10 flex items-center justify-between px-3 pt-2 pb-2 shrink-0">
         <button
           type="button"
-          onClick={onClose}
-          className="text-zinc-500 hover:text-white transition-colors"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log("[NowPlayingPanel] close tapped");
+            onClose();
+          }}
+          className="relative z-10 flex h-12 w-12 items-center justify-center rounded-full text-zinc-300 active:bg-zinc-800 active:text-white transition-colors"
           aria-label="Close now playing"
+          style={{ touchAction: "manipulation" }}
         >
           <IconChevronDown />
         </button>
         <p className="text-[11px] font-medium uppercase tracking-widest text-zinc-600">Now Playing</p>
-        <div className="w-5" /> {/* spacer */}
+        <div className="w-12" /> {/* spacer to balance the close button */}
       </div>
 
       {/* Scrollable body */}

@@ -159,7 +159,7 @@ export default function AppLayout() {
 
       <BottomNav activeView={activeView} onViewChange={handleViewChange} />
 
-      {activeView === "library" && <ImportFab onToast={showToast} />}
+      {activeView === "library" && !isNowPlayingOpen && <ImportFab onToast={showToast} />}
 
       <NowPlayingPanel open={isNowPlayingOpen} onClose={() => setIsNowPlayingOpen(false)} />
 

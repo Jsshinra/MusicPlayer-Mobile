@@ -1,0 +1,34 @@
+{
+  "name": "lumen-mobile",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Lumen Mobile — Android port of Lumen via Capacitor",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "cap:sync": "npm run build && cap sync",
+    "android:open": "cap open android",
+    "android:run": "cap run android"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.3.4",
+    "@capacitor/core": "8.3.4",
+    "@capacitor/filesystem": "8.1.2",
+    "@capacitor/preferences": "8.0.1",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "zustand": "5.0.12"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.3.4",
+    "@tailwindcss/vite": "4.2.2",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.1",
+    "tailwindcss": "4.2.2",
+    "typescript": "5.7.3",
+    "vite": "8.0.7"
+  }
+}

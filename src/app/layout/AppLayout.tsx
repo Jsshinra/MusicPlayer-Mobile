@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { LibraryView } from "../../features/library/components/LibraryView";
+import { LocalLibrarySection } from "../../features/library/components/LocalLibrarySection";
 import { QueueSection } from "../../features/library/components/QueueSection";
 import { PlaylistDetailView } from "../../features/playlists/components/PlaylistDetailView";
 import { PlaylistsView } from "../../features/playlists/components/PlaylistsView";
@@ -126,13 +126,7 @@ export default function AppLayout() {
         ref={mainRef}
         className="relative z-10 flex-1 overflow-y-auto px-4 pt-4 pb-4"
       >
-        {activeView === "library" && (
-          <LibraryView
-            onToast={showToast}
-            onPlaylistSelect={handlePlaylistSelect}
-            onCreatePlaylist={() => setIsCreateModalOpen(true)}
-          />
-        )}
+        {activeView === "library" && <LocalLibrarySection onToast={showToast} />}
         {activeView === "playlists" && (
           <PlaylistsView
             onPlaylistSelect={handlePlaylistSelect}

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { LibraryView } from "../../features/library/components/LibraryView";
 import { QueueSection } from "../../features/library/components/QueueSection";
 import { PlaylistDetailView } from "../../features/playlists/components/PlaylistDetailView";
+import { PlaylistsView } from "../../features/playlists/components/PlaylistsView";
 import { CreatePlaylistModal } from "../../features/playlists/components/CreatePlaylistModal";
 import { SettingsView } from "../../features/settings/components/SettingsView";
 import { MobilePlayerBar } from "../../features/player/components/MobilePlayerBar";
@@ -11,7 +12,7 @@ import { BottomNav } from "./BottomNav";
 import { useAppStore } from "../store/useAppStore";
 import { playerOrchestrator } from "../../core/player/player-orchestrator";
 
-export type ActiveView = "library" | "queue" | "playlist-detail" | "settings";
+export type ActiveView = "library" | "playlists" | "queue" | "playlist-detail" | "settings";
 
 export default function AppLayout() {
   const [activeView, setActiveView] = useState<ActiveView>("library");
@@ -46,7 +47,7 @@ export default function AppLayout() {
 
   const handleBackFromPlaylist = () => {
     setActivePlaylistId(null);
-    setActiveView("library");
+    setActiveView("playlists");
   };
 
   const handleMusicDirChange = () => {
@@ -128,6 +129,12 @@ export default function AppLayout() {
         {activeView === "library" && (
           <LibraryView
             onToast={showToast}
+            onPlaylistSelect={handlePlaylistSelect}
+            onCreatePlaylist={() => setIsCreateModalOpen(true)}
+          />
+        )}
+        {activeView === "playlists" && (
+          <PlaylistsView
             onPlaylistSelect={handlePlaylistSelect}
             onCreatePlaylist={() => setIsCreateModalOpen(true)}
           />

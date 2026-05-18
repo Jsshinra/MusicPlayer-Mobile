@@ -14,6 +14,17 @@ function IconLibrary() {
   );
 }
 
+function IconPlaylists() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="3" y="4" width="14" height="3" rx="1" />
+      <rect x="3" y="10" width="14" height="3" rx="1" />
+      <rect x="3" y="16" width="9" height="3" rx="1" />
+      <circle cx="19" cy="17" r="3" />
+    </svg>
+  );
+}
+
 function IconQueue() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -59,8 +70,8 @@ function Tab({ icon, label, active, onClick }: TabProps) {
 export function BottomNav({ activeView, onViewChange }: BottomNavProps) {
   const t = useTranslation();
 
-  // playlist-detail is a sub-view of library: keep the Library tab highlighted
-  const libraryActive = activeView === "library" || activeView === "playlist-detail";
+  // playlist-detail is a sub-view of the Playlists tab on mobile
+  const playlistsActive = activeView === "playlists" || activeView === "playlist-detail";
 
   return (
     <nav
@@ -71,8 +82,14 @@ export function BottomNav({ activeView, onViewChange }: BottomNavProps) {
         <Tab
           icon={<IconLibrary />}
           label={t.library}
-          active={libraryActive}
+          active={activeView === "library"}
           onClick={() => onViewChange("library")}
+        />
+        <Tab
+          icon={<IconPlaylists />}
+          label={t.playlists}
+          active={playlistsActive}
+          onClick={() => onViewChange("playlists")}
         />
         <Tab
           icon={<IconQueue />}

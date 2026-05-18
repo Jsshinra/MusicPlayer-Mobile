@@ -1,4 +1,4 @@
-import { CSSProperties, useMemo } from "react";
+import { CSSProperties } from "react";
 import { useAppStore } from "../../app/store/useAppStore";
 
 function clamp(value: number, min: number, max: number): number {
@@ -13,59 +13,54 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
+/**
+ * Mobile-tuned ambient glow.
+ *
+ * The desktop version animates 600-700px blurred orbs with `animate-pulse`,
+ * which the Android WebView can't composite cheaply — every store update
+ * triggered a visible flicker. Here we:
+ *  - shrink the orbs to mobile-screen-appropriate sizes (280-360px)
+ *  - drop the pulse animation entirely; color/opacity transitions are enough
+ *  - pin each orb to its own GPU layer with translateZ(0)
+ *  - keep the slow color transition so changing accent/vibe still feels smooth
+ */
 export function AmbientGlow() {
   const playbackState  = useAppStore((s) => s.playbackState);
   const volume         = useAppStore((s) => s.volume);
-  const progressMs     = useAppStore((s) => s.progressMs);
-  const durationMs     = useAppStore((s) => s.durationMs);
   const vibeColor      = useAppStore((s) => s.vibeColor);
   const accentColor    = useAppStore((s) => s.accentColor);
   const vibeIntensity  = useAppStore((s) => s.vibeIntensity);
 
   const color = vibeColor ?? accentColor;
   const intensityFactor = clamp(vibeIntensity / 100, 0, 1);
+  const volumeRatio = clamp(volume / 100, 0, 1);
 
-  const progressRatio = durationMs > 0 ? clamp(progressMs / durationMs, 0, 1) : 0;
-  const volumeRatio   = clamp(volume / 100, 0, 1);
+  const baseOpacity = playbackState === "playing" ? 1 : playbackState === "paused" ? 0.8 : 1;
+  const opacity = baseOpacity * (0.8 + volumeRatio * 0.2);
 
-  const params = useMemo(() => {
-    const isPlaying = playbackState === "playing";
-    const isPaused  = playbackState === "paused";
-
-    const baseOpacity  = isPlaying ? 1 : isPaused ? 0.8 : 1;
-    const opacity      = baseOpacity * (0.8 + volumeRatio * 0.2);
-    const pulseDuration = isPlaying ? "3s" : isPaused ? "6s" : "12s";
-    const orbe3Left    = 38 + progressRatio * 8;
-
-    return { opacity, pulseDuration, orbe3Left };
-  }, [playbackState, progressRatio, volumeRatio]);
-
-  const sharedAnim: CSSProperties = { animationDuration: params.pulseDuration };
-  const colorTransition = "background-color 1.5s ease";
+  const layerBase: CSSProperties = {
+    transform: "translateZ(0)",
+    willChange: "background-color",
+    transition: "background-color 1.5s ease",
+  };
 
   return (
     <div
       aria-hidden
       className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
-      style={{ opacity: params.opacity, transition: "opacity 1.2s ease" }}
+      style={{ opacity, transition: "opacity 1.2s ease" }}
     >
       <div
-        className="absolute top-[10%] left-[30%] w-[600px] h-[600px] rounded-full blur-[150px] animate-pulse"
-        style={{ ...sharedAnim, backgroundColor: hexToRgba(color, 0.30 * intensityFactor), transition: colorTransition }}
+        className="absolute -top-20 left-1/4 h-[320px] w-[320px] rounded-full blur-[100px]"
+        style={{ ...layerBase, backgroundColor: hexToRgba(color, 0.28 * intensityFactor) }}
       />
       <div
-        className="absolute top-[40%] right-[15%] w-[700px] h-[700px] rounded-full blur-[160px] animate-pulse"
-        style={{ ...sharedAnim, animationDelay: "0.8s", backgroundColor: hexToRgba(color, 0.24 * intensityFactor), transition: colorTransition }}
+        className="absolute top-1/3 -right-16 h-[360px] w-[360px] rounded-full blur-[110px]"
+        style={{ ...layerBase, backgroundColor: hexToRgba(color, 0.22 * intensityFactor) }}
       />
       <div
-        className="absolute bottom-[15%] w-[500px] h-[500px] rounded-full blur-[140px] animate-pulse"
-        style={{
-          ...sharedAnim,
-          animationDelay: "1.6s",
-          left: `${params.orbe3Left}%`,
-          backgroundColor: hexToRgba(color, 0.27 * intensityFactor),
-          transition: `left 2s ease, ${colorTransition}`,
-        }}
+        className="absolute -bottom-24 left-[20%] h-[280px] w-[280px] rounded-full blur-[90px]"
+        style={{ ...layerBase, backgroundColor: hexToRgba(color, 0.24 * intensityFactor) }}
       />
     </div>
   );

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { LocalLibrarySection } from "../../features/library/components/LocalLibrarySection";
+import { ImportFab } from "../../features/library/components/ImportFab";
 import { QueueSection } from "../../features/library/components/QueueSection";
 import { PlaylistDetailView } from "../../features/playlists/components/PlaylistDetailView";
 import { PlaylistsView } from "../../features/playlists/components/PlaylistsView";
@@ -157,6 +158,8 @@ export default function AppLayout() {
       </div>
 
       <BottomNav activeView={activeView} onViewChange={handleViewChange} />
+
+      {activeView === "library" && <ImportFab onToast={showToast} />}
 
       <NowPlayingPanel open={isNowPlayingOpen} onClose={() => setIsNowPlayingOpen(false)} />
 

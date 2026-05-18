@@ -313,11 +313,15 @@ export const useAppStore = create<AppState>()(
         removeItem: (name: string) => window.electronStore.removeItem(name),
       })),
       partialize: (state) => {
-        // Keep artworkUrl only if it's a persistent file:// URI.
-        // Blob URLs and data: URLs are session-only and must be stripped.
+        // Keep artworkUrl only if it points at a real file on disk we can
+        // reload later. Drop blob: / data: URLs (session-only, huge).
+        // Accept: file:// (desktop) and Capacitor-rewritten file URLs
+        // (https://localhost/_capacitor_file_/... on Android, etc).
+        const isPersistableArtwork = (url: string | undefined): url is string =>
+          !!url && (url.startsWith('file://') || url.includes('_capacitor_file_'));
         const stripArtwork = ({ artworkUrl, ...track }: Track) => ({
           ...track,
-          artworkUrl: artworkUrl?.startsWith('file://') ? artworkUrl : undefined,
+          artworkUrl: isPersistableArtwork(artworkUrl) ? artworkUrl : undefined,
           uri: track.localPath ? localPathToFileUri(track.localPath) : track.uri,
         });
 

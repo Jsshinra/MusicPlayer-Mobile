@@ -122,6 +122,55 @@ if (!window.miniPlayerAPI) {
   }
 }
 
+if (!window.downloadAPI) {
+  window.downloadAPI = {
+    checkDeps: async () => ({ ytdlp: false, ffmpeg: false }),
+    getMusicDir: async () => '',
+    search: async () => [],
+    searchPlaylists: async () => [],
+    searchAlbumTracklist: async () => [],
+    start: noop,
+    startSpotify: noop,
+    startBatchUrls: noop,
+    cancel: noop,
+    onProgress: noop,
+    onDone: noop,
+    onBatchDone: noop,
+    onError: noop,
+    removeAllListeners: noop,
+  }
+}
+
+if (!window.radioAPI) {
+  window.radioAPI = {
+    resolveSeed: async () => null,
+    getMixIds: async () => [],
+    downloadTrack: noop,
+    cancel: noop,
+    onTrackReady: noop,
+    onDownloadDone: noop,
+    removeAllListeners: noop,
+  }
+}
+
+if (!window.mixAPI) {
+  window.mixAPI = {
+    start: noop,
+    cancel: noop,
+    onProgress: noop,
+    onTrackReady: noop,
+    onDone: noop,
+    onError: noop,
+    removeAllListeners: noop,
+  }
+}
+
+if (!window.spotifyAPI) {
+  window.spotifyAPI = {
+    scrapePlaylist: async () => ({ name: '', tracks: [] }),
+  }
+}
+
 if (!window.fileUtils) {
   window.fileUtils = { getPathForFile: () => '' }
 }

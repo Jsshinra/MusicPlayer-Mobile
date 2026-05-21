@@ -27,8 +27,16 @@ export interface AudioEngineSnapshot {
   state: AudioEngineState;
 }
 
+export interface AudioEngineLoadOptions {
+  uri: string;
+  title?: string;
+  artist?: string;
+  album?: string;
+  artworkUri?: string;
+}
+
 export interface AudioEnginePlugin {
-  loadTrack(options: { uri: string }): Promise<void>;
+  loadTrack(options: AudioEngineLoadOptions): Promise<void>;
   play(): Promise<void>;
   pause(): Promise<void>;
   stop(): Promise<void>;

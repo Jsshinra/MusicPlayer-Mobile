@@ -1,4 +1,4 @@
-import { parseBlob } from "music-metadata-browser";
+import { parseBlob } from "music-metadata";
 import { Track } from "../../../shared/types/music";
 import { localPathToFileUri } from "../../../shared/utils/local-file-uri";
 

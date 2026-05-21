@@ -5,7 +5,9 @@ const config: CapacitorConfig = {
   appName: 'Lumen',
   webDir: 'dist',
   android: {
-    allowMixedContent: false,
+    // Required so the WebView (served from https://localhost) can fetch the
+    // desktop WiFi-share server, which runs over plain http on the LAN.
+    allowMixedContent: true,
   },
 }
 

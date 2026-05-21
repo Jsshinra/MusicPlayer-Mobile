@@ -5,7 +5,6 @@ import type { Track } from "../../../shared/types/music";
 import { formatMsToClock } from "../../../shared/utils/format-time";
 import { localPathToFileUri } from "../../../shared/utils/local-file-uri";
 import { useTranslation } from "../../../shared/i18n/useTranslation";
-import { AddToPlaylistButton } from "../../../shared/components/AddToPlaylistButton";
 
 /* ── Icons ─────────────────────────────────────────────────── */
 
@@ -36,6 +35,33 @@ function IconRemove() {
   );
 }
 
+function IconMore() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+      <circle cx="3" cy="8" r="1.5" />
+      <circle cx="8" cy="8" r="1.5" />
+      <circle cx="13" cy="8" r="1.5" />
+    </svg>
+  );
+}
+
+function IconQueue() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+      <path d="M2 4.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5zm0 3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5zm0 3a.5.5 0 0 1 .5-.5H8a.5.5 0 0 1 0 1H2.5a.5.5 0 0 1-.5-.5z"/>
+      <path d="M11.5 10a.5.5 0 0 1 .5.5v1.5h1.5a.5.5 0 0 1 0 1H12v1.5a.5.5 0 0 1-1 0V13H9.5a.5.5 0 0 1 0-1H11v-1.5a.5.5 0 0 1 .5-.5z"/>
+    </svg>
+  );
+}
+
+function IconChevronRight() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+      <path d="M5.5 3.5L10 8l-4.5 4.5-1-1L8 8 4.5 4.5z"/>
+    </svg>
+  );
+}
+
 function IconAdd() {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
@@ -48,15 +74,6 @@ function IconSearch() {
   return (
     <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
       <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.099zm-5.242 1.656a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z" />
-    </svg>
-  );
-}
-
-function IconTag() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
-      <path d="M6 4.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm-1 0a.5.5 0 1 0-1 0 .5.5 0 0 0 1 0z"/>
-      <path d="M2 1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 1 6.586V2a1 1 0 0 1 1-1zm0 5.586 7 7 4.586-4.586-7-7H2v4.586z"/>
     </svg>
   );
 }
@@ -217,122 +234,149 @@ type AlbumCompletionState =
   | { status: "done"; downloaded: number }
   | { status: "error"; message: string };
 
-/* ── Set album button + popover ────────────────────────────── */
+/* ── Track row kebab menu ──────────────────────────────────── */
 
-function SetAlbumButton({ track, onToast }: { track: Track; onToast?: (msg: string) => void }) {
+interface TrackRowMenuProps {
+  track: Track;
+  onAddToQueue: (track: Track) => void;
+  onRemove: (track: Track) => void;
+  onToast?: (msg: string) => void;
+}
+
+function TrackRowMenu({ track, onAddToQueue, onRemove, onToast }: TrackRowMenuProps) {
   const t = useTranslation();
-  const libraryTracks = useAppStore((s) => s.libraryTracks);
-  const updateLibraryTrack = useAppStore((s) => s.updateLibraryTrack);
+  const playlists = useAppStore((s) => s.playlists);
+  const appendTrackToPlaylist = useAppStore((s) => s.appendTrackToPlaylist);
   const [open, setOpen] = useState(false);
-  const [value, setValue] = useState(track.album ?? "");
-  const [saving, setSaving] = useState(false);
-  const [inputFocused, setInputFocused] = useState(false);
+  const [view, setView] = useState<"main" | "playlists">("main");
   const ref = useRef<HTMLDivElement>(null);
 
-  const albumNames = useMemo(
-    () => [...new Set(libraryTracks.map((tr) => tr.album).filter((a): a is string => !!a))].sort(),
-    [libraryTracks],
-  );
-
-  const suggestions = useMemo(() => {
-    const q = value.trim().toLowerCase();
-    return albumNames.filter((n) => q === "" || n.toLowerCase().includes(q));
-  }, [albumNames, value]);
+  const availablePlaylists = playlists.filter((p) => !p.trackIds.includes(track.id));
 
   useEffect(() => {
     if (!open) return;
-    const handler = (e: MouseEvent) => {
+    // Reset to main view whenever the menu reopens.
+    setView("main");
+    const handler = (e: Event) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("touchstart", handler);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("touchstart", handler);
+    };
   }, [open]);
 
-  if (!track.localPath) return null;
+  const close = () => setOpen(false);
 
-  async function handleSave() {
-    const album = value.trim();
-    if (!album || !track.localPath) return;
-    setSaving(true);
-    try {
-      await window.libraryAPI.writeAlbumTag(track.localPath, album);
-      updateLibraryTrack(track.id, { album });
-      setOpen(false);
-      onToast?.(t.albumSaved);
-    } finally {
-      setSaving(false);
-    }
-  }
+  const handleAddToQueue = () => {
+    onAddToQueue(track);
+    close();
+  };
+
+  const handleAddToPlaylist = (playlistId: string, playlistName: string) => {
+    appendTrackToPlaylist(playlistId, track.id);
+    onToast?.(`${t.addedToPlaylist} "${playlistName}"`);
+    close();
+  };
+
+  const handleRemove = () => {
+    onRemove(track);
+    close();
+  };
 
   return (
     <div ref={ref} className="relative">
       <button
         type="button"
-        aria-label={t.setAlbum}
-        onClick={(e) => { e.stopPropagation(); setValue(track.album ?? ""); setOpen((v) => !v); }}
-        className="flex h-6 w-6 items-center justify-center rounded text-zinc-400 hover:text-white transition-colors"
+        aria-label="More actions"
+        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+        className="flex h-8 w-8 items-center justify-center rounded-full text-zinc-400 hover:bg-white/5 hover:text-white transition-colors"
       >
-        <IconTag />
+        <IconMore />
       </button>
 
       {open && (
         <div
-          className="absolute bottom-full right-0 mb-1 z-50 w-52 rounded-xl border border-zinc-700 bg-zinc-900 p-3 shadow-xl"
+          className="absolute bottom-full right-0 mb-1 z-50 w-56 rounded-xl border border-zinc-700 bg-zinc-900 py-1 shadow-xl overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
-          <p className="mb-2 text-[10px] font-medium uppercase tracking-widest text-zinc-600">
-            {t.setAlbum}
-          </p>
+          {view === "main" && (
+            <ul>
+              <li>
+                <button
+                  type="button"
+                  onClick={handleAddToQueue}
+                  className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-800 active:bg-zinc-800 transition-colors"
+                >
+                  <span className="text-zinc-400"><IconQueue /></span>
+                  Agregar a la cola
+                </button>
+              </li>
+              {playlists.length > 0 && (
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => setView("playlists")}
+                    className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm text-zinc-200 hover:bg-zinc-800 active:bg-zinc-800 transition-colors"
+                  >
+                    <span className="text-zinc-400"><IconAdd /></span>
+                    <span className="flex-1">Agregar a playlist</span>
+                    <span className="text-zinc-600"><IconChevronRight /></span>
+                  </button>
+                </li>
+              )}
+              <li className="my-1 border-t border-zinc-800" aria-hidden />
+              <li>
+                <button
+                  type="button"
+                  onClick={handleRemove}
+                  className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm text-red-400 hover:bg-zinc-800 active:bg-zinc-800 transition-colors"
+                >
+                  <span><IconRemove /></span>
+                  Eliminar
+                </button>
+              </li>
+            </ul>
+          )}
 
-          {/* Input + custom autocomplete */}
-          <div className="relative">
-            <input
-              autoFocus
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              onFocus={() => setInputFocused(true)}
-              onBlur={() => setInputFocused(false)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void handleSave();
-                if (e.key === "Escape") setOpen(false);
-              }}
-              placeholder={t.albumNamePlaceholder}
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-xs text-zinc-200 placeholder-zinc-600 outline-none focus:border-zinc-500 transition-colors"
-            />
-            {inputFocused && suggestions.length > 0 && (
-              <ul className="absolute top-full left-0 right-0 mt-0.5 z-10 max-h-40 overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-800 shadow-lg">
-                {suggestions.map((name) => (
-                  <li key={name}>
-                    <button
-                      type="button"
-                      onMouseDown={(e) => { e.preventDefault(); setValue(name); }}
-                      className="w-full truncate px-2.5 py-1.5 text-left text-xs text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors"
-                    >
-                      {name}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <div className="mt-2 flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="text-xs text-zinc-600 hover:text-zinc-300 transition-colors"
-            >
-              {t.cancel}
-            </button>
-            <button
-              type="button"
-              onClick={() => void handleSave()}
-              disabled={saving || !value.trim()}
-              className="rounded-md bg-white px-2.5 py-1 text-xs font-medium text-black hover:bg-zinc-200 disabled:opacity-40 transition-colors"
-            >
-              {saving ? "…" : t.save}
-            </button>
-          </div>
+          {view === "playlists" && (
+            <div>
+              <div className="flex items-center gap-1 px-2 pt-1 pb-1">
+                <button
+                  type="button"
+                  onClick={() => setView("main")}
+                  className="flex h-7 w-7 items-center justify-center rounded text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors -scale-x-100"
+                  aria-label="Back"
+                >
+                  <IconChevronRight />
+                </button>
+                <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-500">
+                  Agregar a playlist
+                </p>
+              </div>
+              {availablePlaylists.length === 0 ? (
+                <p className="px-3 py-2.5 text-xs text-zinc-500 italic">
+                  {t.alreadyInAllPlaylists}
+                </p>
+              ) : (
+                <ul className="max-h-48 overflow-y-auto">
+                  {availablePlaylists.map((pl) => (
+                    <li key={pl.id}>
+                      <button
+                        type="button"
+                        onClick={() => handleAddToPlaylist(pl.id, pl.name)}
+                        className="w-full truncate px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors"
+                      >
+                        {pl.name}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -439,34 +483,15 @@ function TrackRow({
           </span>
         </button>
 
-        {/* Duration */}
-        {track.durationMs > 0 && (
-          <span className="shrink-0 text-[11px] tabular-nums text-zinc-600 group-hover:opacity-0 transition-opacity duration-100">
-            {formatMsToClock(track.durationMs)}
-          </span>
-        )}
-
-        {/* Action buttons — visible only on hover */}
-        <div className="absolute right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-100">
-          <AddToPlaylistButton trackId={track.id} onToast={onToast} />
-          <SetAlbumButton track={track} onToast={onToast} />
-          <button
-            type="button"
-            aria-label={`Add ${track.title} to queue`}
-            onClick={() => onAddToQueue(track)}
-            className="flex h-6 w-6 items-center justify-center rounded text-zinc-400 hover:text-white transition-colors"
-          >
-            <IconAdd />
-          </button>
-          <button
-            type="button"
-            aria-label={`Remove ${track.title}`}
-            onClick={() => onRemove(track)}
-            className="flex h-6 w-6 items-center justify-center rounded text-zinc-400 hover:text-red-400 transition-colors"
-          >
-            <IconRemove />
-          </button>
-        </div>
+        {/* Kebab menu (mobile-friendly replacement for the desktop hover
+            actions). Contains queue, playlist, and remove. SetAlbumButton
+            isn't included because writeAlbumTag is a no-op stub on mobile. */}
+        <TrackRowMenu
+          track={track}
+          onAddToQueue={onAddToQueue}
+          onRemove={onRemove}
+          onToast={onToast}
+        />
       </div>
     </li>
   );
@@ -852,14 +877,6 @@ export function LocalLibrarySection({ onToast }: { onToast?: (msg: string) => vo
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={() => void pickAndImport()}
-            className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900/80 px-3 py-1.5 text-xs font-medium text-zinc-400 transition-colors hover:border-zinc-700 hover:text-white"
-          >
-            <IconAdd />
-            {t.addSongs}
-          </button>
         </div>
       </div>
 

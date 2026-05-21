@@ -3,6 +3,7 @@ import { useAppStore } from '../../../app/store/useAppStore'
 import { useTranslation } from '../../../shared/i18n/useTranslation'
 import type { Language } from '../../../shared/i18n/translations'
 import { AboutModal } from './AboutModal'
+import { WifiImportModal } from '../../wifi-import/components/WifiImportModal'
 
 const ACCENT_PRESETS = [
   { label: 'Blanco',  value: '#ffffff' },
@@ -55,10 +56,12 @@ export function SettingsView(_props: SettingsViewProps) {
   const setPersonOpen       = useAppStore((s) => s.setPersonalizationOpen)
 
   const [showAbout, setShowAbout] = useState(false)
+  const [showWifiImport, setShowWifiImport] = useState(false)
 
   return (
     <section className="mx-auto max-w-xl">
       {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
+      {showWifiImport && <WifiImportModal onClose={() => setShowWifiImport(false)} />}
 
       <h2 className="mb-6 text-xl font-bold tracking-tight text-white">{t.settingsTitle}</h2>
 
@@ -72,6 +75,23 @@ export function SettingsView(_props: SettingsViewProps) {
           <div>
             <p className="text-sm font-semibold text-white">{t.aboutTitle}</p>
             <p className="mt-0.5 text-xs text-zinc-500">{t.aboutDescription}</p>
+          </div>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" className="shrink-0 text-zinc-600">
+            <path fillRule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Importar desde PC */}
+      <div className="mb-4 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/60">
+        <button
+          type="button"
+          onClick={() => setShowWifiImport(true)}
+          className="flex w-full items-center justify-between px-5 py-4 text-left transition-colors active:bg-zinc-800/40"
+        >
+          <div>
+            <p className="text-sm font-semibold text-white">Importar desde PC</p>
+            <p className="mt-0.5 text-xs text-zinc-500">Escaneá el QR de tu Lumen de escritorio</p>
           </div>
           <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" className="shrink-0 text-zinc-600">
             <path fillRule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z" />

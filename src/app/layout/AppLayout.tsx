@@ -16,7 +16,40 @@ import { playerOrchestrator } from "../../core/player/player-orchestrator";
 
 export type ActiveView = "library" | "playlists" | "queue" | "playlist-detail" | "settings";
 
+function useStoreHydrated(): boolean {
+  const [hydrated, setHydrated] = useState(() => useAppStore.persist.hasHydrated());
+  useEffect(() => {
+    if (hydrated) return;
+    const unsubFinish = useAppStore.persist.onFinishHydration(() => setHydrated(true));
+    if (useAppStore.persist.hasHydrated()) setHydrated(true);
+    return () => {
+      unsubFinish();
+    };
+  }, [hydrated]);
+  return hydrated;
+}
+
 export default function AppLayout() {
+  const hydrated = useStoreHydrated();
+  const bgColor = useAppStore((s) => s.bgColor);
+
+  if (!hydrated) {
+    // Blank splash with the user's chosen bg color while @capacitor/preferences
+    // pulls persisted state off SharedPreferences. Shows for ~50-150ms on a
+    // cold start; prevents the library from rendering "0 tracks" then flashing
+    // to the real count.
+    return (
+      <div
+        className="flex h-screen w-screen items-center justify-center"
+        style={{ backgroundColor: bgColor }}
+      />
+    );
+  }
+
+  return <AppLayoutInner />;
+}
+
+function AppLayoutInner() {
   const [activeView, setActiveView] = useState<ActiveView>("library");
   const mainRef = useRef<HTMLElement>(null);
   const [activePlaylistId, setActivePlaylistId] = useState<string | null>(null);

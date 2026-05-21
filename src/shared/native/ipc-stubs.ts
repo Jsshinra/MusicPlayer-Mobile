@@ -1,3 +1,5 @@
+import { Browser } from "@capacitor/browser";
+
 /**
  * Temporary stubs for the Electron IPC globals the desktop app uses.
  *
@@ -5,8 +7,8 @@
  * unchanged during the early porting phase. Each stub will be replaced as
  * we wire its mobile equivalent:
  *
- *  - electronStore  → @capacitor/preferences (Paso 2)
- *  - libraryAPI     → @capacitor/filesystem + WiFi transfer (Paso 4)
+ *  - electronStore  → @capacitor/preferences (DONE — useAppStore uses preferencesStorage)
+ *  - libraryAPI     → @capacitor/filesystem + WiFi transfer (Paso 5)
  *  - shellAPI       → @capacitor/browser
  *  - updaterAPI     → GitHub Releases poll (Paso 6)
  *  - playlistAPI    → @capacitor/filesystem picker
@@ -20,15 +22,6 @@
 
 function noop(): void {}
 async function asyncNoop(): Promise<void> {}
-
-// ── electronStore — backed by localStorage so persistence "works" in WebView ──
-if (!window.electronStore) {
-  window.electronStore = {
-    getItem: (key) => window.localStorage.getItem(key),
-    setItem: (key, value) => window.localStorage.setItem(key, value),
-    removeItem: (key) => window.localStorage.removeItem(key),
-  }
-}
 
 if (!window.libraryAPI) {
   window.libraryAPI = {
@@ -59,8 +52,10 @@ if (!window.playlistAPI) {
 
 if (!window.shellAPI) {
   window.shellAPI = {
+    // @capacitor/browser opens in an in-app Custom Tab on Android and SFSafariViewController on iOS.
+    // On the web dev server (Browser plugin's web fallback) it falls back to window.open.
     openExternal: (url) => {
-      window.open(url, '_blank', 'noopener,noreferrer')
+      void Browser.open({ url })
     },
   }
 }

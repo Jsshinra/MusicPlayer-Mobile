@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { SourceType, PlaybackState, Track, Playlist } from "../../shared/types/music";
 import { localPathToFileUri } from "../../shared/utils/local-file-uri";
+import { preferencesStorage } from "../../shared/native/preferences-storage";
 import type { Language } from "../../shared/i18n/translations";
  
 const MAX_RECENT_TRACKS = 20;
@@ -307,11 +308,7 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: "music-player-store",
-      storage: createJSONStorage(() => ({
-        getItem: (name: string) => window.electronStore.getItem(name),
-        setItem: (name: string, value: string) => window.electronStore.setItem(name, value),
-        removeItem: (name: string) => window.electronStore.removeItem(name),
-      })),
+      storage: createJSONStorage(() => preferencesStorage),
       partialize: (state) => {
         // Keep artworkUrl only if it points at a real file on disk we can
         // reload later. Drop blob: / data: URLs (session-only, huge).

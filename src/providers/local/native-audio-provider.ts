@@ -74,7 +74,15 @@ export class NativeAudioProvider implements MusicProvider {
     const playUri = track.localPath
       ? (track.localPath.startsWith("file://") ? track.localPath : `file://${track.localPath}`)
       : track.uri;
-    await AudioEngine.loadTrack({ uri: playUri });
+    // artworkUrl can be a Capacitor convertFileSrc URL (https://localhost/...)
+    // or a file:// path. Media3's notification provider accepts either.
+    await AudioEngine.loadTrack({
+      uri: playUri,
+      title: track.title,
+      artist: track.artist,
+      album: track.album,
+      artworkUri: track.artworkUrl,
+    });
     await AudioEngine.play();
   }
 

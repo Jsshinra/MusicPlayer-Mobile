@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { Filesystem, Directory } from "@capacitor/filesystem";
-import { parseBlob } from "music-metadata-browser";
+import { parseBlob } from "music-metadata";
 import { useAppStore } from "../../../app/store/useAppStore";
 import type { Track } from "../../../shared/types/music";
 import { localPathToFileUri } from "../../../shared/utils/local-file-uri";
@@ -41,7 +41,14 @@ async function importOne(file: File): Promise<Track> {
     }
     const pic = meta.common.picture?.[0];
     if (pic) {
-      artworkBlob = new Blob([pic.data.buffer as ArrayBuffer], { type: pic.format });
+      // pic.data is a Uint8Array — passing pic.data.buffer would include
+      // unrelated bytes when it's a view into a larger buffer. Pass the
+      // Uint8Array itself so the Blob only contains the picture bytes.
+      // pic.format examples: "image/jpeg", "image/png". Older tags sometimes
+      // emit just "jpeg"; normalize to a proper MIME type.
+      const rawFormat = pic.format || "image/jpeg";
+      const mimeType = rawFormat.includes("/") ? rawFormat : `image/${rawFormat}`;
+      artworkBlob = new Blob([pic.data], { type: mimeType });
     }
   } catch (err) {
     console.warn("[import] metadata parse failed", err);

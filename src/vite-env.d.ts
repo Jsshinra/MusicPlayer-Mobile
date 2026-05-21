@@ -124,11 +124,6 @@ interface Window {
   fileUtils: {
     getPathForFile(file: File): string
   }
-  electronStore: {
-    getItem(key: string): string | null
-    setItem(key: string, value: string): void
-    removeItem(key: string): void
-  }
   libraryAPI: {
     pickFiles(): Promise<TrackMeta[]>
     importFromPath(filePath: string): Promise<TrackMeta>

@@ -163,12 +163,16 @@ export function NowPlayingPanel({ open, onClose }: { open: boolean; onClose: () 
         <div className="w-12" /> {/* spacer to balance the close button */}
       </div>
 
-      {/* Scrollable body */}
-      <div className="flex-1 overflow-y-auto min-h-0">
+      {/* Scrollable body — overflow-x is locked so a tall viewport can't
+          make the artwork (sized via 48vh) exceed the screen width and turn
+          this into a swipe-left/right zone. */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
         <div className="flex flex-col items-center justify-center min-h-full px-8 py-6 gap-[clamp(1rem,2.2vh,2.5rem)]">
 
-        {/* Artwork */}
-        <div className="w-[clamp(180px,48vh,520px)] aspect-square rounded-2xl overflow-hidden bg-zinc-900 border border-zinc-800 flex items-center justify-center shrink-0 shadow-2xl">
+        {/* Artwork — capped at min(48vh, ~80vw) so on tall narrow phones the
+            cover never bleeds past the viewport horizontally. */}
+        <div className="aspect-square rounded-2xl overflow-hidden bg-zinc-900 border border-zinc-800 flex items-center justify-center shrink-0 shadow-2xl"
+             style={{ width: "min(48vh, calc(100vw - 4rem))", maxWidth: 520, minWidth: 180 }}>
           {currentTrack?.artworkUrl ? (
             <img
               src={currentTrack.artworkUrl}

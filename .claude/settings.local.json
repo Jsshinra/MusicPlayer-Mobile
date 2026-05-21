@@ -15,7 +15,13 @@
       "Bash(git commit -m 'Port desktop UI with IPC stubs \\(Paso 2 visual checkpoint\\) *)",
       "Bash(./gradlew installDebug)",
       "Bash(\"C:/Program Files/Android/Android Studio/jbr/bin/java.exe\" -version)",
-      "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ./gradlew installDebug)"
+      "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ./gradlew installDebug)",
+      "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ./gradlew :app:compileDebugJavaWithJavac)",
+      "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" npx cap sync android)",
+      "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ./gradlew :app:assembleDebug)",
+      "Bash(adb devices *)",
+      "Bash(npm uninstall *)",
+      "Bash(npm install *)"
     ]
   }
 }

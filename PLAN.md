@@ -161,7 +161,6 @@ La app mobile es reproductor + receptor de biblioteca vía WiFi.
 - (Opcional) Habilitar Play Store internal track
 
 ### Pendientes menores
-- URLs reales en AboutModal (Discord/Cafecito/Ko-fi siguen en PLACEHOLDER)
 - Track rows de PlaylistDetailView todavía usan hover-only actions — mismo problema que solucionamos en LocalLibrarySection. Falta darle el mismo tratamiento (kebab menu)
 - AmbientGlow muestra banding feo en AVD (radial-gradient con alpha bajo). Quedó la versión original con `filter: blur(100px)` que también banda. En dispositivos físicos puede que se vea OK. Si no, candidato a borrar del mobile
 

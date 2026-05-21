@@ -79,7 +79,7 @@ export function AboutModal({ onClose }: Props) {
 
           <button
             type="button"
-            onClick={() => openExternal('https://discord.gg/PLACEHOLDER')}
+            onClick={() => openExternal('https://discord.com/users/jsshinra')}
             className="w-full flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-800/40 px-4 py-3 text-sm text-zinc-300 hover:border-zinc-700 hover:text-white hover:bg-zinc-800 transition-colors text-left"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="shrink-0 text-[#5865F2]">
@@ -98,7 +98,7 @@ export function AboutModal({ onClose }: Props) {
 
           <button
             type="button"
-            onClick={() => openExternal('https://cafecito.app/PLACEHOLDER')}
+            onClick={() => openExternal('https://cafecito.app/jsshinra')}
             className="w-full flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-800/40 px-4 py-3 text-sm text-zinc-300 hover:border-zinc-700 hover:text-white hover:bg-zinc-800 transition-colors text-left"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="shrink-0 text-amber-400">
@@ -117,7 +117,7 @@ export function AboutModal({ onClose }: Props) {
 
           <button
             type="button"
-            onClick={() => openExternal('https://ko-fi.com/PLACEHOLDER')}
+            onClick={() => openExternal('https://ko-fi.com/jsshinra')}
             className="w-full flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-800/40 px-4 py-3 text-sm text-zinc-300 hover:border-zinc-700 hover:text-white hover:bg-zinc-800 transition-colors text-left"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="shrink-0 text-[#FF5E5B]">

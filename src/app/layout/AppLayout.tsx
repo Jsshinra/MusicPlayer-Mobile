@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { App as CapacitorApp } from "@capacitor/app";
+import { Capacitor } from "@capacitor/core";
+import { AudioEngine } from "../../shared/native/audio-engine";
 import { LocalLibrarySection } from "../../features/library/components/LocalLibrarySection";
 import { ImportFab } from "../../features/library/components/ImportFab";
 import { QueueSection } from "../../features/library/components/QueueSection";
@@ -69,6 +71,7 @@ function AppLayoutInner() {
   const fontScale           = useAppStore((s) => s.fontScale)
   const currentTrackForRpc  = useAppStore((s) => s.currentTrack)
   const playbackStateForRpc = useAppStore((s) => s.playbackState)
+  const audioFocusEnabled   = useAppStore((s) => s.audioFocusEnabled)
 
   const handleViewChange = (view: ActiveView) => {
     if (view !== "playlist-detail") setActivePlaylistId(null);
@@ -175,6 +178,25 @@ function AppLayoutInner() {
     document.documentElement.style.fontSize = size
   }, [fontScale])
 
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return
+    void AudioEngine.setAudioFocusEnabled({ enabled: audioFocusEnabled })
+  }, [audioFocusEnabled])
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return
+    const nextHandle = AudioEngine.addListener("skipNext", () => {
+      void playerOrchestrator.next()
+    })
+    const prevHandle = AudioEngine.addListener("skipPrevious", () => {
+      void playerOrchestrator.previous()
+    })
+    return () => {
+      void nextHandle.then((h) => h.remove())
+      void prevHandle.then((h) => h.remove())
+    }
+  }, [])
+
   return (
     <div
       className="relative flex h-screen flex-col overflow-hidden text-white"
@@ -196,7 +218,7 @@ function AppLayoutInner() {
           />
         )}
         {activeView === "queue" && <QueueSection />}
-        {activeView === "settings" && <SettingsView onMusicDirChange={handleMusicDirChange} />}
+        {activeView === "settings" && <SettingsView onMusicDirChange={handleMusicDirChange} onToast={showToast} />}
         {activeView === "playlist-detail" && activePlaylistId && (
           <PlaylistDetailView
             playlistId={activePlaylistId}

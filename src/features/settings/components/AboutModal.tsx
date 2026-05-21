@@ -84,7 +84,7 @@ export function AboutModal({ onClose }: Props) {
 
         {/* Body */}
         <div className="px-6 py-5">
-          <p className="text-sm text-zinc-400 leading-relaxed">
+          <p className="text-sm text-zinc-400 leading-relaxed whitespace-pre-line">
             {t.aboutBody}
           </p>
         </div>

@@ -4,6 +4,7 @@ import { useTranslation } from '../../../shared/i18n/useTranslation'
 import type { Language } from '../../../shared/i18n/translations'
 import { AboutModal } from './AboutModal'
 import { WifiImportModal } from '../../wifi-import/components/WifiImportModal'
+import { StorageSection } from './StorageSection'
 
 const ACCENT_PRESETS = [
   { label: 'Blanco',  value: '#ffffff' },
@@ -31,9 +32,10 @@ interface SettingsViewProps {
   // Kept for compatibility with the desktop signature; unused on mobile
   // (music dir picker doesn't apply — library comes via WiFi import).
   onMusicDirChange?: (oldDir: string, newDir: string) => void
+  onToast?: (message: string) => void
 }
 
-export function SettingsView(_props: SettingsViewProps) {
+export function SettingsView({ onToast }: SettingsViewProps) {
   const t = useTranslation()
 
   const accentColor         = useAppStore((s) => s.accentColor)
@@ -43,6 +45,7 @@ export function SettingsView(_props: SettingsViewProps) {
   const fontScale           = useAppStore((s) => s.fontScale)
   const showAlbumCovers     = useAppStore((s) => s.showAlbumCovers)
   const appLanguage         = useAppStore((s) => s.appLanguage)
+  const audioFocusEnabled   = useAppStore((s) => s.audioFocusEnabled)
 
   const setAccentColor        = useAppStore((s) => s.setAccentColor)
   const setBgColor            = useAppStore((s) => s.setBgColor)
@@ -51,6 +54,7 @@ export function SettingsView(_props: SettingsViewProps) {
   const setFontScale          = useAppStore((s) => s.setFontScale)
   const setShowAlbumCovers    = useAppStore((s) => s.setShowAlbumCovers)
   const setAppLanguage        = useAppStore((s) => s.setAppLanguage)
+  const setAudioFocusEnabled  = useAppStore((s) => s.setAudioFocusEnabled)
 
   const personOpen          = useAppStore((s) => s.personalizationOpen)
   const setPersonOpen       = useAppStore((s) => s.setPersonalizationOpen)
@@ -98,6 +102,35 @@ export function SettingsView(_props: SettingsViewProps) {
           </svg>
         </button>
       </div>
+
+      {/* Audio focus */}
+      <div className="mb-4 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/60">
+        <div className="flex items-center justify-between px-5 py-4">
+          <div className="min-w-0 pr-4">
+            <p className="text-sm font-semibold text-white">{t.audioFocusLabel}</p>
+            <p className="mt-0.5 text-xs text-zinc-500">{t.audioFocusDescription}</p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={audioFocusEnabled}
+            onClick={() => setAudioFocusEnabled(!audioFocusEnabled)}
+            className={[
+              "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors",
+              audioFocusEnabled ? "bg-white" : "bg-zinc-700",
+            ].join(" ")}
+          >
+            <span
+              className={[
+                "inline-block h-3.5 w-3.5 rounded-full bg-black shadow transition-transform",
+                audioFocusEnabled ? "translate-x-4" : "translate-x-1",
+              ].join(" ")}
+            />
+          </button>
+        </div>
+      </div>
+
+      <StorageSection onToast={onToast} />
 
       {/* Language */}
       <div className="mb-4 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/60">

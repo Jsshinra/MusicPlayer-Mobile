@@ -308,6 +308,8 @@ function normalize(s: string): string {
   return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 }
 
+type TrackFilter = "all" | "new" | "existing";
+
 function SelectView({
   manifest,
   selectedTracks,
@@ -318,6 +320,25 @@ function SelectView({
   isExistingPlaylist,
 }: SelectViewProps) {
   const [search, setSearch] = useState("");
+  // Default to "new" because the common case on a re-import is "show me what
+  // I don't have yet". User can flip to "all" or "existing" if they want.
+  const [filter, setFilter] = useState<TrackFilter>("new");
+
+  const counts = useMemo(() => {
+    let newCount = 0;
+    let existingCount = 0;
+    for (const t of manifest.tracks) {
+      if (isExistingTrack(t.id)) existingCount++;
+      else newCount++;
+    }
+    return { all: manifest.tracks.length, new: newCount, existing: existingCount };
+  }, [manifest.tracks, isExistingTrack]);
+
+  // If "Nuevas" comes back empty (user re-imported and there's nothing new),
+  // bounce to "Todas" so they don't see an empty list with no clue why.
+  useEffect(() => {
+    if (filter === "new" && counts.new === 0 && counts.all > 0) setFilter("all");
+  }, [filter, counts.new, counts.all]);
 
   const toggleTrack = (id: string) => {
     const next = new Set(selectedTracks);
@@ -345,17 +366,20 @@ function SelectView({
     setSelectedTracks(nextTracks);
   };
 
-  // Tracks visible after search filter. Empty query → all tracks.
+  // Tracks visible after applying filter chip + search query.
   const visibleTracks = useMemo(() => {
+    let result = manifest.tracks;
+    if (filter === "new") result = result.filter((t) => !isExistingTrack(t.id));
+    else if (filter === "existing") result = result.filter((t) => isExistingTrack(t.id));
     const q = normalize(search.trim());
-    if (!q) return manifest.tracks;
-    return manifest.tracks.filter(
+    if (!q) return result;
+    return result.filter(
       (t) =>
         normalize(t.title).includes(q) ||
         normalize(t.artist).includes(q) ||
         (t.album && normalize(t.album).includes(q)),
     );
-  }, [manifest.tracks, search]);
+  }, [manifest.tracks, search, filter, isExistingTrack]);
 
   // The select-all/none buttons act on what's currently visible. So if the
   // user searched "quevedo" they can select only those, not the whole library.
@@ -392,13 +416,11 @@ function SelectView({
     setSelectedTracks(nextTracks);
   };
 
-  const newTracksCount = manifest.tracks.filter((t) => !isExistingTrack(t.id)).length;
-
   return (
     <div className="space-y-5 py-2">
       <div>
         <p className="text-sm font-medium text-white">{manifest.tracks.length} pistas en {manifest.serverName}</p>
-        <p className="text-xs text-zinc-500">{newTracksCount} no están todavía en este celular</p>
+        <p className="text-xs text-zinc-500">{counts.new} nuevas · {counts.existing} ya en tu biblioteca</p>
       </div>
 
       {/* Playlists */}
@@ -450,7 +472,7 @@ function SelectView({
       )}
 
       {/* Tracks */}
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         <div className="flex items-center justify-between">
           <p className="text-[10px] uppercase tracking-widest text-zinc-600">
             Pistas · {selectedTracks.size}/{manifest.tracks.length}
@@ -466,6 +488,13 @@ function SelectView({
                 : (search ? "Todas filtradas" : "Todas")}
             </button>
           )}
+        </div>
+
+        {/* Filter chips: Todas / Nuevas / Ya en biblioteca */}
+        <div className="flex gap-1.5">
+          <FilterChip label="Todas" count={counts.all} active={filter === "all"} onClick={() => setFilter("all")} />
+          <FilterChip label="Nuevas" count={counts.new} active={filter === "new"} onClick={() => setFilter("new")} disabled={counts.new === 0} />
+          <FilterChip label="Ya en biblioteca" count={counts.existing} active={filter === "existing"} onClick={() => setFilter("existing")} disabled={counts.existing === 0} />
         </div>
 
         {/* Search input — filters by title, artist, or album */}
@@ -495,7 +524,15 @@ function SelectView({
         </div>
 
         {visibleTracks.length === 0 ? (
-          <p className="px-2 py-6 text-center text-xs text-zinc-600">Sin resultados para "{search}"</p>
+          <p className="px-2 py-6 text-center text-xs text-zinc-600">
+            {search
+              ? `Sin resultados para "${search}"`
+              : filter === "new"
+                ? "No hay pistas nuevas"
+                : filter === "existing"
+                  ? "Ninguna pista ya en tu biblioteca"
+                  : "Sin pistas"}
+          </p>
         ) : (
           <ul>
             {visibleTracks.map((t) => {
@@ -534,5 +571,33 @@ function SelectView({
         )}
       </div>
     </div>
+  );
+}
+
+interface FilterChipProps {
+  label: string;
+  count: number;
+  active: boolean;
+  onClick: () => void;
+  disabled?: boolean;
+}
+
+function FilterChip({ label, count, active, onClick, disabled }: FilterChipProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={[
+        "flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium transition-colors",
+        active
+          ? "bg-white text-black"
+          : "border border-zinc-700 text-zinc-300 hover:bg-zinc-800",
+        disabled ? "opacity-40 cursor-not-allowed" : "",
+      ].join(" ")}
+    >
+      <span>{label}</span>
+      <span className={active ? "text-black/60" : "text-zinc-500"}>{count}</span>
+    </button>
   );
 }

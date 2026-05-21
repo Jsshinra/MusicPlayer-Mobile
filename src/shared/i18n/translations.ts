@@ -119,6 +119,19 @@ type Translations = {
   compactDensity: string
   showAlbumCovers: string
   showAlbumCoversDescription: string
+  audioFocusLabel: string
+  audioFocusDescription: string
+  storageLabel: string
+  storageDescription: string
+  storageMusic: string
+  storageArtwork: string
+  storageCovers: string
+  storageOrphansLabel: string
+  storageOrphansHint: string
+  storageCleanButton: string
+  storageCleaningButton: string
+  storageCleanResult: (n: number, bytes: string) => string
+  storageNoOrphans: string
   crossfade: string
   crossfadeDescription: string
   musicFolder: string
@@ -328,6 +341,19 @@ const es: Translations = {
   compactDensity: 'Compacto',
   showAlbumCovers: 'Portadas de álbum',
   showAlbumCoversDescription: 'Muestra las portadas en la biblioteca y en la radio',
+  audioFocusLabel: 'Pausar con otras apps',
+  audioFocusDescription: 'Cuando entra una llamada o suena otra app, la música pausa o baja el volumen.',
+  storageLabel: 'Almacenamiento',
+  storageDescription: 'Qué está ocupando espacio en este celular',
+  storageMusic: 'Música',
+  storageArtwork: 'Portadas',
+  storageCovers: 'Portadas de playlist',
+  storageOrphansLabel: 'Archivos huérfanos',
+  storageOrphansHint: 'Archivos que ya no pertenecen a ninguna pista o playlist',
+  storageCleanButton: 'Limpiar huérfanos',
+  storageCleaningButton: 'Limpiando…',
+  storageCleanResult: (n, bytes) => `${n} archivos eliminados · ${bytes} liberados`,
+  storageNoOrphans: 'Nada que limpiar',
   crossfade: 'Crossfade',
   crossfadeDescription: 'Transición suave entre canciones',
   musicFolder: 'Carpeta de música',
@@ -404,7 +430,7 @@ const es: Translations = {
   ytSavingTo: 'Guardando en:',
   aboutTitle: 'Acerca de',
   aboutDescription: 'Información sobre Lumen',
-  aboutBody: 'Lumen nació porque quería un reproductor de música local que se sintiera moderno, rápido y sin distracciones. Sin suscripciones, sin anuncios, solo tu música.',
+  aboutBody: '¡Hola! Soy Shinra, hago apps y cualquier apoyo significa mucho 👾\n\nAhora mismo estoy con Lumen — una biblioteca de música local para PC (¡y pronto mobile!) donde podés descargar música directo desde la app, con buscador y recomendaciones propias.\n\nSi te gusta lo que hago, un cafecito ayuda un montón. ¡Gracias por estar acá!',
   aboutCommunityLabel: 'Comunidad & apoyo',
   aboutDiscord: 'Discord',
   aboutDiscordBadge: 'Para feedback',
@@ -534,6 +560,19 @@ const en: Translations = {
   compactDensity: 'Compact',
   showAlbumCovers: 'Album covers',
   showAlbumCoversDescription: 'Show album artwork in the library and radio',
+  audioFocusLabel: 'Yield to other apps',
+  audioFocusDescription: 'When a call or another app starts playing, your music pauses or ducks.',
+  storageLabel: 'Storage',
+  storageDescription: "What's using space on this phone",
+  storageMusic: 'Music',
+  storageArtwork: 'Artwork',
+  storageCovers: 'Playlist covers',
+  storageOrphansLabel: 'Orphan files',
+  storageOrphansHint: "Files that no longer belong to any track or playlist",
+  storageCleanButton: 'Clean orphans',
+  storageCleaningButton: 'Cleaning…',
+  storageCleanResult: (n, bytes) => `${n} files deleted · ${bytes} freed`,
+  storageNoOrphans: 'Nothing to clean',
   crossfade: 'Crossfade',
   crossfadeDescription: 'Smooth transition between songs',
   musicFolder: 'Music folder',
@@ -610,7 +649,7 @@ const en: Translations = {
   ytSavingTo: 'Saving to:',
   aboutTitle: 'About',
   aboutDescription: 'Information about Lumen',
-  aboutBody: 'Lumen was born because I wanted a local music player that felt modern, fast, and distraction-free. No subscriptions, no ads — just your music.',
+  aboutBody: "Hey! I'm Shinra, I build apps and any support means a lot 👾\n\nRight now I'm working on Lumen — a local music library for PC (and mobile soon!) where you can download music directly from the app, with its own search and recommendations.\n\nIf you enjoy what I make, a coffee goes a long way. Thanks for being here!",
   aboutCommunityLabel: 'Community & support',
   aboutDiscord: 'Discord',
   aboutDiscordBadge: 'For feedback',

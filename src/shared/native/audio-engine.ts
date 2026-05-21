@@ -42,6 +42,7 @@ export interface AudioEnginePlugin {
   stop(): Promise<void>;
   seek(options: { positionMs: number }): Promise<void>;
   setVolume(options: { volume: number }): Promise<void>;
+  setAudioFocusEnabled(options: { enabled: boolean }): Promise<void>;
   getState(): Promise<AudioEngineSnapshot>;
 
   addListener(
@@ -59,6 +60,14 @@ export interface AudioEnginePlugin {
   addListener(
     eventName: "error",
     cb: (event: AudioEngineErrorEvent) => void,
+  ): Promise<PluginListenerHandle>;
+  addListener(
+    eventName: "skipNext",
+    cb: () => void,
+  ): Promise<PluginListenerHandle>;
+  addListener(
+    eventName: "skipPrevious",
+    cb: () => void,
   ): Promise<PluginListenerHandle>;
 }
 

@@ -47,11 +47,22 @@ public class AudioEnginePlugin extends Plugin {
         super.load();
         mainHandler = new Handler(Looper.getMainLooper());
         mainHandler.post(this::connectController);
+        LumenMediaSessionService.setSkipListener(new LumenMediaSessionService.SkipListener() {
+            @Override
+            public void onNext() {
+                notifyListeners("skipNext", new JSObject());
+            }
+            @Override
+            public void onPrevious() {
+                notifyListeners("skipPrevious", new JSObject());
+            }
+        });
     }
 
     @Override
     protected void handleOnDestroy() {
         stopPositionUpdates();
+        LumenMediaSessionService.setSkipListener(null);
         if (mainHandler != null) {
             mainHandler.post(() -> {
                 if (controller != null) {
@@ -210,6 +221,16 @@ public class AudioEnginePlugin extends Plugin {
         Double v = call.getDouble("volume");
         final float volume = v != null ? Math.max(0f, Math.min(1f, v.floatValue())) : 1f;
         runOnController(call, c -> c.setVolume(volume));
+    }
+
+    @PluginMethod
+    public void setAudioFocusEnabled(PluginCall call) {
+        Boolean enabled = call.getBoolean("enabled");
+        final boolean value = enabled == null ? true : enabled;
+        mainHandler.post(() -> {
+            LumenMediaSessionService.applyAudioFocusEnabled(value);
+            call.resolve();
+        });
     }
 
     @PluginMethod

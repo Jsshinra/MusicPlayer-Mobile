@@ -55,6 +55,7 @@ interface AppState {
   crossfadeDuration: number;
   showAlbumCovers: boolean;
   appLanguage: Language;
+  audioFocusEnabled: boolean;
   // Playback origin — not persisted
   playbackOrigin: PlaybackOrigin;
   // Radio — not persisted
@@ -105,6 +106,7 @@ interface AppState {
   setCrossfadeDuration: (v: number) => void;
   setShowAlbumCovers: (v: boolean) => void;
   setAppLanguage: (lang: Language) => void;
+  setAudioFocusEnabled: (enabled: boolean) => void;
   setPlaybackOrigin: (origin: PlaybackOrigin) => void;
   reorderPlaylists: (fromIndex: number, toIndex: number) => void;
   setRadioActive: (active: boolean) => void;
@@ -152,6 +154,7 @@ export const useAppStore = create<AppState>()(
       crossfadeDuration: 0,
       showAlbumCovers: true,
       appLanguage: 'es' as Language,
+      audioFocusEnabled: true,
       playbackOrigin: null,
       radioActive: false,
       radioSeedTrackId: null,
@@ -282,6 +285,7 @@ export const useAppStore = create<AppState>()(
       setCrossfadeDuration: (crossfadeDuration) => set({ crossfadeDuration }),
       setShowAlbumCovers: (showAlbumCovers) => set({ showAlbumCovers }),
       setAppLanguage: (appLanguage) => set({ appLanguage }),
+      setAudioFocusEnabled: (audioFocusEnabled) => set({ audioFocusEnabled }),
       setPlaybackOrigin: (playbackOrigin) => set({ playbackOrigin }),
       reorderPlaylists: (fromIndex, toIndex) =>
         set((state) => {
@@ -363,6 +367,7 @@ export const useAppStore = create<AppState>()(
           showAlbumCovers: state.showAlbumCovers,
           radioDownloadedTrackIds: state.radioDownloadedTrackIds,
           appLanguage: state.appLanguage,
+          audioFocusEnabled: state.audioFocusEnabled,
         };
       },
       merge: (persistedState, currentState) => {

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { App as CapacitorApp } from '@capacitor/app'
 import { useTranslation } from '../../../shared/i18n/useTranslation'
@@ -7,12 +7,33 @@ interface Props {
   onClose: () => void
 }
 
+const USDT_TRC20_ADDRESS = 'TNEAk9zjPiUtWqJmou4Ncjyf94Fiy39uts'
+
 function openExternal(url: string) {
   window.shellAPI.openExternal(url)
 }
 
 export function AboutModal({ onClose }: Props) {
   const t = useTranslation()
+  const [copied, setCopied] = useState(false)
+
+  async function copyCryptoAddress() {
+    try {
+      await navigator.clipboard.writeText(USDT_TRC20_ADDRESS)
+    } catch {
+      // Older WebViews fall back to a hidden textarea + execCommand
+      const ta = document.createElement('textarea')
+      ta.value = USDT_TRC20_ADDRESS
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+    }
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 1800)
+  }
 
   // Android hardware back closes the modal instead of exiting the app.
   // Capacitor's listener stack means whichever modal registers last (this
@@ -117,20 +138,26 @@ export function AboutModal({ onClose }: Props) {
 
           <button
             type="button"
-            onClick={() => openExternal('https://ko-fi.com/jsshinra')}
+            onClick={copyCryptoAddress}
             className="w-full flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-800/40 px-4 py-3 text-sm text-zinc-300 hover:border-zinc-700 hover:text-white hover:bg-zinc-800 transition-colors text-left"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="shrink-0 text-[#FF5E5B]">
-              <path d="M23.881 8.948c-.773-4.085-4.859-4.593-4.859-4.593H.723c-.604 0-.679.798-.679.798s-.082 7.324-.022 11.822c.164 4.814 3.943 5.025 5.975 5.023 2.243-.002 17.878-.002 17.878-.002 2.561-.028 3.939-2.323 4.062-5.055.179-3.913-.027-7.993-.056-7.993zm-2.818 7.155c-.113 1.9-1.222 2.894-2.133 2.894H2.979c-.945 0-2.043-.981-2.19-2.979-.122-1.677-.082-7.622-.082-7.622h18.322c.024 0 2.133.208 2.133 2.286v5.421zm-3.604-4.955c0 1.214-.986 2.197-2.203 2.197s-2.203-.983-2.203-2.197c0-1.212.986-2.196 2.203-2.196s2.203.984 2.203 2.196z"/>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="shrink-0 text-[#26A17B]">
+              <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm1.067 12.97v-.002c-.072.005-.443.027-1.272.027-.66 0-1.124-.02-1.288-.027v.002c-2.534-.112-4.427-.554-4.427-1.084 0-.529 1.893-.972 4.427-1.085v1.731c.166.011.642.04 1.299.04.79 0 1.187-.033 1.261-.04V10.8c2.529.113 4.418.555 4.418 1.084 0 .53-1.889.972-4.418 1.085zm0-2.349V9.072h3.546V6.71H7.382v2.362h3.546v1.549c-2.883.132-5.05.704-5.05 1.388 0 .684 2.167 1.255 5.05 1.388v4.966h2.139v-4.967c2.878-.133 5.041-.704 5.041-1.387 0-.683-2.163-1.254-5.041-1.387z"/>
             </svg>
-            <div className="flex items-center gap-1.5">
-              <span className="font-medium">{t.aboutKofi}</span>
-              <span className="rounded-full bg-zinc-700 px-2 py-0.5 text-[10px] font-medium text-zinc-300">
-                {t.aboutSupportBadge}
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="font-medium">{t.aboutCrypto}</span>
+              <span className="rounded-full bg-zinc-700 px-2 py-0.5 text-[10px] font-medium text-zinc-300 shrink-0">
+                {copied ? t.aboutCryptoCopied : t.aboutCryptoNetwork}
               </span>
             </div>
             <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" className="ml-auto shrink-0 text-zinc-600">
-              <path fillRule="evenodd" d="M14 2.5a.5.5 0 0 0-.5-.5h-6a.5.5 0 0 0 0 1h4.793L2.146 13.146a.5.5 0 0 0 .708.708L13 3.707V8.5a.5.5 0 0 0 1 0v-6z"/>
+              {copied
+                ? <path fillRule="evenodd" d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+                : <>
+                    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+                    <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+                  </>
+              }
             </svg>
           </button>
         </div>

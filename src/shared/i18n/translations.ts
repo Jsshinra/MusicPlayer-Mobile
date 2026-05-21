@@ -203,7 +203,9 @@ type Translations = {
   aboutDiscord: string
   aboutDiscordBadge: string
   aboutCafecito: string
-  aboutKofi: string
+  aboutCrypto: string
+  aboutCryptoNetwork: string
+  aboutCryptoCopied: string
   aboutSupportBadge: string
 }
 
@@ -407,7 +409,9 @@ const es: Translations = {
   aboutDiscord: 'Discord',
   aboutDiscordBadge: 'Para feedback',
   aboutCafecito: 'Cafecito',
-  aboutKofi: 'Ko-fi',
+  aboutCrypto: 'USDT',
+  aboutCryptoNetwork: 'TRC-20',
+  aboutCryptoCopied: 'Dirección copiada',
   aboutSupportBadge: 'Para apoyar la app',
 }
 
@@ -611,7 +615,9 @@ const en: Translations = {
   aboutDiscord: 'Discord',
   aboutDiscordBadge: 'For feedback',
   aboutCafecito: 'Cafecito',
-  aboutKofi: 'Ko-fi',
+  aboutCrypto: 'USDT',
+  aboutCryptoNetwork: 'TRC-20',
+  aboutCryptoCopied: 'Address copied',
   aboutSupportBadge: 'To support the app',
 }
 

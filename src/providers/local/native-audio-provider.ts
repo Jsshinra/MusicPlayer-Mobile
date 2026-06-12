@@ -34,6 +34,14 @@ export class NativeAudioProvider implements MusicProvider {
     });
 
     await AudioEngine.addListener("playingChanged", (e: AudioEnginePlayingEvent) => {
+      // Guard against a trailing playingChanged(false) clobbering a terminal
+      // state. When a track ends naturally, Media3 emits stateChanged("ended")
+      // *and* playingChanged(false); the dispatch order is not guaranteed.
+      // If we let isPlaying=false overwrite "idle" with "paused", the
+      // orchestrator's track-end check (currentTrack===null && state==="idle")
+      // never matches and the queue stops auto-advancing. "loading"/"playing"/
+      // "paused" are live states we still want to react to.
+      if (this.playbackState === "idle" || this.playbackState === "error") return;
       this.playbackState = e.isPlaying ? "playing" : "paused";
     });
 

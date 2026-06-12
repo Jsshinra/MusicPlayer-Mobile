@@ -46,12 +46,10 @@ type Translations = {
   albumTracksOwned: (owned: number, total: number) => string
   noTracksImported: string
   noSongsYet: string
-  addFirstSong: string
-  dragDropHint: string
+  tapPlusToAddSongs: string
   searchPlaceholder: string
   clearSearch: string
   noResultsFor: string
-  dropAudioHere: string
   unknownArtist: string
   removedFromLibrary: (title: string) => string
   addedToQueue: (title: string) => string
@@ -268,12 +266,10 @@ const es: Translations = {
   albumTracksOwned: (owned, total) => `${owned} de ${total} en tu biblioteca`,
   noTracksImported: 'Sin canciones importadas',
   noSongsYet: 'Aún no hay canciones',
-  addFirstSong: 'Agrega tu primera canción',
-  dragDropHint: 'o arrastra archivos aquí',
+  tapPlusToAddSongs: 'Tocá el botón + para agregar canciones',
   searchPlaceholder: 'Buscar por título o artista…',
   clearSearch: 'Limpiar búsqueda',
   noResultsFor: 'Sin resultados para',
-  dropAudioHere: 'Suelta archivos de audio aquí',
   unknownArtist: 'Artista desconocido',
   removedFromLibrary: (title) => `"${title}" eliminado de la biblioteca`,
   addedToQueue: (title) => `"${title}" añadido a la cola`,
@@ -487,12 +483,10 @@ const en: Translations = {
   albumTracksOwned: (owned, total) => `${owned} of ${total} in your library`,
   noTracksImported: 'No tracks imported',
   noSongsYet: 'No songs imported yet',
-  addFirstSong: 'Add your first song',
-  dragDropHint: 'or drag & drop files here',
+  tapPlusToAddSongs: 'Tap the + button to add songs',
   searchPlaceholder: 'Search by title or artist…',
   clearSearch: 'Clear search',
   noResultsFor: 'No results for',
-  dropAudioHere: 'Drop audio files here',
   unknownArtist: 'Unknown artist',
   removedFromLibrary: (title) => `"${title}" removed from library`,
   addedToQueue: (title) => `"${title}" added to queue`,

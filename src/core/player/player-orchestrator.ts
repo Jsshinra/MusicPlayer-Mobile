@@ -65,8 +65,9 @@ export class PlayerOrchestrator {
       store.setSource(source);
       await provider.setVolume(store.volume);
 
+      // Don't start the loop here — nothing is playing yet. syncStoreWithProvider
+      // arms it once play() reports "loading"/"playing".
       await this.syncStoreWithProvider();
-      this.startSyncLoop();
     } catch (error) {
       console.error(`Failed to initialize provider ${source}:`, error);
       throw error;
@@ -99,6 +100,18 @@ export class PlayerOrchestrator {
       provider.getProgressMs(),
       provider.getDurationMs(),
     ]);
+
+    // Keep the polling loop alive only while playback is actually moving. When
+    // paused/idle/errored the provider's cached values don't change, so ticking
+    // 4×/s is wasted wakeups (CPU/battery on device). Done *before* the
+    // track-end/autoplay logic below: on a real track-end this reads "idle" and
+    // stops the loop, then autoplay's play() runs a nested sync that reports
+    // "loading" and re-arms it for the next track.
+    if (playbackState === "playing" || playbackState === "loading") {
+      this.ensureSyncLoop();
+    } else {
+      this.stopSyncLoop();
+    }
 
     // Capture and advance the provider-track-id cursor.
     const previousProviderTrackId = this.lastProviderTrackId;
@@ -220,8 +233,10 @@ export class PlayerOrchestrator {
     void this.next();
   }
 
-  private startSyncLoop(): void {
-    this.stopSyncLoop();
+  // Idempotent: a no-op when the loop is already running, so it's safe to call
+  // from a sync tick or from play()/resume() without resetting the interval.
+  private ensureSyncLoop(): void {
+    if (this.syncIntervalId !== null) return;
 
     this.syncIntervalId = window.setInterval(() => {
       void this.syncStoreWithProvider();
@@ -348,6 +363,11 @@ export class PlayerOrchestrator {
     }
     await this.activeProvider.resume();
     await this.syncStoreWithProvider();
+    // The native "playing" state arrives via an async event, so the sync above
+    // may still read a stale "paused" and stop the loop. Force it back on; the
+    // first tick reads the fresh state and self-corrects if playback didn't
+    // actually start.
+    this.ensureSyncLoop();
   }
 
   public async next(): Promise<void> {
@@ -406,6 +426,9 @@ export class PlayerOrchestrator {
     // track-end and trigger autoplay.
     this.lastProviderTrackId = null;
     this.activeSource = null;
+    // No active source left, so future ticks would just early-return forever —
+    // stop the loop outright.
+    this.stopSyncLoop();
     const store = useAppStore.getState();
     store.setCurrentTrack(null);
     store.setPlaybackState('idle');
@@ -418,6 +441,16 @@ export class PlayerOrchestrator {
     const { queue, currentQueueIndex, shuffleEnabled, shuffleHistory, shuffleOrder } = store;
 
     if (queue.length === 0 || !this.activeSource) return;
+
+    // First "previous" past the threshold just restarts the current track.
+    // After the restart the position is back near 0, so tapping again falls
+    // through to the real "skip to previous track" branch below.
+    const RESTART_THRESHOLD_MS = 5000;
+    const position = await this.activeProvider.getProgressMs();
+    if (position > RESTART_THRESHOLD_MS) {
+      await this.seek(0);
+      return;
+    }
 
     if (shuffleEnabled && queue.length > 1) {
       if (shuffleHistory.length === 0) return;

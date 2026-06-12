@@ -144,6 +144,17 @@ La app mobile es reproductor + receptor de biblioteca vía WiFi.
 - Cover ahora es tappable y abre file picker nativo Android para cambiarla (se copia al sandbox como `playlist-covers/<id>-<ts>.<ext>`)
 - Delete pregunta antes de borrar (`window.confirm` con `t.deletePlaylistConfirm`)
 
+### ✅ Fixes críticos de lógica — `2026-06-11` (a verificar en device)
+Encontrados en una auditoría de código. Ambos requieren prueba en dispositivo real.
+
+- **Auto-avance de la cola roto en Android (race de eventos Media3).**
+  `src/providers/local/native-audio-provider.ts`
+  Al terminar una pista, Media3 emite `stateChanged("ended")` **y** `playingChanged(false)`, y el orden de despacho no está garantizado. El handler de `playingChanged` ponía `playbackState = "paused"`, pisando el `"idle"` que setea `"ended"`. El orquestador detecta fin de pista con `currentTrack===null && playbackState==="idle"` (`player-orchestrator.ts:143`), así que con `"paused"` **nunca auto-avanzaba**: la canción se quedaba frenada con la barra vacía. Fix: el handler de `playingChanged` ahora ignora el evento si el estado ya es terminal (`"idle"`/`"error"`). Robusto ante cualquier orden de los dos eventos.
+
+- **"Eliminar" no borraba el archivo en mobile (fuga de almacenamiento).**
+  `src/features/library/hooks/useLocalLibrary.ts` + `src/features/settings/storage-utils.ts`
+  `removeTrackFromLibrary` borraba de disco con `window.libraryAPI.deleteFile`, que en mobile es un no-op stub → el `.mp3` y el artwork quedaban huérfanos y "Eliminar" nunca liberaba espacio. Fix: nuevo helper `deleteTrackFiles(track)` en `storage-utils` que borra audio (`music/<id>.<ext>`) y artwork (`artwork/<id>.<ext>`) vía `@capacitor/filesystem`, derivando el basename tanto del `file://` (localPath) como de la URL `_capacitor_file_` (artworkUrl). El hook ahora ramifica: nativo → `deleteTrackFiles`; desktop → `window.libraryAPI.deleteFile`.
+
 ---
 
 ## ⏳ Pasos siguientes

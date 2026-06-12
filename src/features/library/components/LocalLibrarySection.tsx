@@ -1,9 +1,7 @@
-import { DragEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppStore } from "../../../app/store/useAppStore";
 import { useLocalLibrary } from "../hooks/useLocalLibrary";
 import type { Track } from "../../../shared/types/music";
-import { formatMsToClock } from "../../../shared/utils/format-time";
-import { localPathToFileUri } from "../../../shared/utils/local-file-uri";
 import { useTranslation } from "../../../shared/i18n/useTranslation";
 
 /* ── Icons ─────────────────────────────────────────────────── */
@@ -189,50 +187,6 @@ function AlbumCard({ name, artist, trackCount, artwork, onClick }: AlbumCardProp
     </button>
   );
 }
-
-/* ── Album title matching ─────────────────────────────────── */
-
-function normalizeForMatch(s: string): string {
-  return s
-    .toLowerCase()
-    .normalize("NFD").replace(/[̀-ͯ]/g, "")
-    .replace(/\(.*?\)|\[.*?\]/g, "")
-    .replace(/[^a-z0-9\s]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function wordSet(s: string): Set<string> {
-  return new Set(normalizeForMatch(s).split(" ").filter((w) => w.length > 1));
-}
-
-function isTrackOwned(ytTitle: string, ownedTracks: Track[]): boolean {
-  const ytWords = wordSet(ytTitle);
-  if (ytWords.size === 0) {
-    const ytNorm = normalizeForMatch(ytTitle);
-    return ownedTracks.some((t) => normalizeForMatch(t.title) === ytNorm);
-  }
-  return ownedTracks.some((t) => {
-    const ownedWords = wordSet(t.title);
-    if (ownedWords.size === 0) return false;
-    let intersection = 0;
-    for (const w of ytWords) if (ownedWords.has(w)) intersection++;
-    const smaller = Math.min(ytWords.size, ownedWords.size);
-    const larger = Math.max(ytWords.size, ownedWords.size);
-    return intersection / smaller >= 0.7 && intersection / larger >= 0.4;
-  });
-}
-
-/* ── Album completion state ───────────────────────────────── */
-
-type AlbumCompletionState =
-  | { status: "idle" }
-  | { status: "searching" }
-  | { status: "found"; ytTracks: AlbumTrackInfo[]; missingTracks: { title: string; url: string }[] }
-  | { status: "not-found" }
-  | { status: "downloading"; total: number }
-  | { status: "done"; downloaded: number }
-  | { status: "error"; message: string };
 
 /* ── Track row kebab menu ──────────────────────────────────── */
 
@@ -499,7 +453,7 @@ function TrackRow({
 
 /* ── Empty state ───────────────────────────────────────────── */
 
-function EmptyState({ onAdd }: { onAdd: () => void }) {
+function EmptyState() {
   const t = useTranslation();
   return (
     <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-800 py-16 text-center">
@@ -509,14 +463,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
         </svg>
       </div>
       <p className="text-sm text-zinc-500">{t.noSongsYet}</p>
-      <button
-        type="button"
-        onClick={onAdd}
-        className="mt-4 text-xs text-zinc-600 underline underline-offset-4 hover:text-zinc-300 transition-colors"
-      >
-        {t.addFirstSong}
-      </button>
-      <p className="mt-2 text-xs text-zinc-700">{t.dragDropHint}</p>
+      <p className="mt-2 text-xs text-zinc-600">{t.tapPlusToAddSongs}</p>
     </div>
   );
 }
@@ -553,47 +500,16 @@ export function LocalLibrarySection({ onToast }: { onToast?: (msg: string) => vo
   const uiDensity = useAppStore((s) => s.uiDensity);
   const showAlbumCovers = useAppStore((s) => s.showAlbumCovers);
   const appendToQueue = useAppStore((s) => s.appendToQueue);
-  const { tracks, pickAndImport, importDroppedFiles, playTrackFromLibrary, playTrackFromPool, removeTrackFromLibrary } =
+  const { tracks, playTrackFromLibrary, playTrackFromPool, removeTrackFromLibrary } =
     useLocalLibrary();
 
   const sectionRef = useRef<HTMLElement | null>(null);
   const [, setOpenMenuTrackId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [isDragging, setIsDragging] = useState(false);
-  const dragCounterRef = useRef(0);
   const [activeTab, setActiveTab] = useState<LibraryTab>("songs");
   const [selectedArtist, setSelectedArtist] = useState<string | null>(null);
   const [selectedAlbum, setSelectedAlbum] = useState<string | null>(null);
-  const [albumCompletion, setAlbumCompletion] = useState<AlbumCompletionState>({ status: "idle" });
-  const [albumDownloadCount, setAlbumDownloadCount] = useState(0);
-  const albumDownloadActiveRef = useRef(false);
-  const albumDownloadCountRef = useRef(0);
-  const albumDownloadAlbumRef = useRef<string | null>(null);
   const showToast = (message: string) => onToast?.(message);
-
-  const handleDragEnter = (e: DragEvent<HTMLElement>) => {
-    e.preventDefault();
-    dragCounterRef.current += 1;
-    if (dragCounterRef.current === 1) setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: DragEvent<HTMLElement>) => {
-    e.preventDefault();
-    dragCounterRef.current -= 1;
-    if (dragCounterRef.current === 0) setIsDragging(false);
-  };
-
-  const handleDragOver = (e: DragEvent<HTMLElement>) => {
-    e.preventDefault();
-  };
-
-  const handleDrop = (e: DragEvent<HTMLElement>) => {
-    e.preventDefault();
-    dragCounterRef.current = 0;
-    setIsDragging(false);
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length > 0) void importDroppedFiles(files);
-  };
 
   const filteredTracks = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -666,84 +582,6 @@ export function LocalLibrarySection({ onToast }: { onToast?: (msg: string) => vo
     return primaryArtist(albumTracks[0].artist, t.unknownArtist);
   }, [selectedAlbum, albumTracks, t.unknownArtist]);
 
-  const handleCompleteAlbum = async () => {
-    if (!selectedAlbum || !albumArtist) return;
-    setAlbumCompletion({ status: "searching" });
-    try {
-      const ytTracks = await window.downloadAPI.searchAlbumTracklist(albumArtist, selectedAlbum);
-      if (ytTracks.length === 0) {
-        setAlbumCompletion({ status: "not-found" });
-        return;
-      }
-      const missingTracks = ytTracks
-        .filter((yt) => !isTrackOwned(yt.title, albumTracks))
-        .map((yt) => ({ title: yt.title, url: yt.url }));
-      setAlbumCompletion({ status: "found", ytTracks, missingTracks });
-    } catch {
-      setAlbumCompletion({ status: "error", message: "Search failed" });
-    }
-  };
-
-  const handleDownloadMissing = async () => {
-    if (albumCompletion.status !== "found" || albumCompletion.missingTracks.length === 0) return;
-    albumDownloadActiveRef.current = true;
-    albumDownloadCountRef.current = 0;
-    albumDownloadAlbumRef.current = selectedAlbum;
-    setAlbumDownloadCount(0);
-    setAlbumCompletion({ status: "downloading", total: albumCompletion.missingTracks.length });
-    const urls = albumCompletion.missingTracks.map((mt) => mt.url);
-    const dir = await window.downloadAPI.getMusicDir();
-    window.downloadAPI.startBatchUrls(urls, dir);
-  };
-
-  // Album download event listeners (set up once on mount)
-  useEffect(() => {
-    window.downloadAPI.onDone(({ filePath }) => {
-      if (!albumDownloadActiveRef.current) return;
-      albumDownloadCountRef.current++;
-      setAlbumDownloadCount(albumDownloadCountRef.current);
-      const albumName = albumDownloadAlbumRef.current;
-      const albumTag = albumName || undefined;
-      const tagPromise = albumTag
-        ? window.libraryAPI.writeAlbumTag(filePath, albumTag).catch(() => {})
-        : Promise.resolve();
-      tagPromise.then(() => window.libraryAPI.importFromPath(filePath)).then((meta) => {
-        const track: Track = {
-          id: `local-${meta.path}`,
-          source: "local",
-          title: meta.title,
-          artist: meta.artist,
-          album: albumName || meta.album,
-          durationMs: meta.durationMs,
-          uri: localPathToFileUri(meta.path),
-          localPath: meta.path,
-          artworkUrl: meta.artworkPath ? localPathToFileUri(meta.artworkPath) : undefined,
-          youtubeId: meta.youtubeId,
-        };
-        useAppStore.getState().appendLibraryTracks([track]);
-      }).catch(() => {});
-    });
-
-    window.downloadAPI.onBatchDone(() => {
-      if (!albumDownloadActiveRef.current) return;
-      albumDownloadActiveRef.current = false;
-      setAlbumCompletion({ status: "done", downloaded: albumDownloadCountRef.current });
-    });
-
-    window.downloadAPI.onError(({ message }) => {
-      if (!albumDownloadActiveRef.current) return;
-      albumDownloadActiveRef.current = false;
-      if (albumDownloadCountRef.current > 0) {
-        setAlbumCompletion({ status: "done", downloaded: albumDownloadCountRef.current });
-      } else {
-        setAlbumCompletion({ status: "error", message });
-      }
-    });
-
-    return () => { albumDownloadActiveRef.current = false; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target;
@@ -760,25 +598,11 @@ export function LocalLibrarySection({ onToast }: { onToast?: (msg: string) => vo
     setActiveTab(tab);
     setSelectedArtist(null);
     setSelectedAlbum(null);
-    setAlbumCompletion({ status: "idle" });
     setQuery("");
   };
 
   return (
-    <section
-      ref={sectionRef}
-      onDragEnter={handleDragEnter}
-      onDragLeave={handleDragLeave}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
-      className={isDragging ? "relative" : undefined}
-    >
-      {isDragging && (
-        <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-xl border-2 border-dashed border-zinc-500 bg-zinc-900/80 backdrop-blur-sm">
-          <p className="text-sm font-medium text-zinc-300">{t.dropAudioHere}</p>
-        </div>
-      )}
-
+    <section ref={sectionRef}>
       {/* Header */}
       <div className="mb-5 flex items-center justify-between">
         <div>
@@ -802,7 +626,7 @@ export function LocalLibrarySection({ onToast }: { onToast?: (msg: string) => vo
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => { setSelectedAlbum(null); setAlbumCompletion({ status: "idle" }); }}
+                onClick={() => setSelectedAlbum(null)}
                 className="flex items-center gap-1 text-zinc-500 hover:text-white transition-colors"
                 aria-label="Back to albums"
               >
@@ -884,7 +708,7 @@ export function LocalLibrarySection({ onToast }: { onToast?: (msg: string) => vo
       {activeTab === "artists" && !selectedArtist && (
         <>
           {tracks.length === 0 ? (
-            <EmptyState onAdd={() => void pickAndImport()} />
+            <EmptyState />
           ) : (
             <div className="grid grid-cols-3 gap-1 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
               {artistGroups.map((artist) => (
@@ -936,7 +760,7 @@ export function LocalLibrarySection({ onToast }: { onToast?: (msg: string) => vo
         <>
           {albumGroups.length === 0 ? (
             tracks.length === 0 ? (
-              <EmptyState onAdd={() => void pickAndImport()} />
+              <EmptyState />
             ) : (
               <div className="flex flex-col items-center justify-center py-14 text-center">
                 <p className="text-sm text-zinc-500">{t.noTracksImported}</p>
@@ -962,148 +786,6 @@ export function LocalLibrarySection({ onToast }: { onToast?: (msg: string) => vo
       {/* ── Album detail view ── */}
       {activeTab === "albums" && selectedAlbum && (
         <>
-          {/* Complete album section */}
-          <div className="mb-4 flex flex-wrap items-center gap-2">
-            {albumCompletion.status === "idle" && (
-              <button
-                type="button"
-                onClick={() => void handleCompleteAlbum()}
-                className="flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900/80 px-3 py-1.5 text-xs font-medium text-zinc-400 transition-colors hover:border-zinc-700 hover:text-white"
-              >
-                <IconAdd />
-                {t.completeAlbum}
-              </button>
-            )}
-            {albumCompletion.status === "searching" && (
-              <span className="flex items-center gap-2 text-xs text-zinc-500">
-                <svg className="animate-spin shrink-0" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-                </svg>
-                {t.searchingAlbum}
-              </span>
-            )}
-            {albumCompletion.status === "not-found" && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-zinc-500">{t.albumNotFound}</span>
-                <button
-                  type="button"
-                  onClick={() => setAlbumCompletion({ status: "idle" })}
-                  className="text-xs text-zinc-600 underline underline-offset-4 hover:text-zinc-300 transition-colors"
-                >
-                  {t.cancel}
-                </button>
-              </div>
-            )}
-            {albumCompletion.status === "found" && (
-              <div className="flex items-center gap-2">
-                {albumCompletion.missingTracks.length === 0 ? (
-                  <>
-                    <span className="text-xs text-green-400">{t.allTracksOwned}</span>
-                    <button
-                      type="button"
-                      onClick={() => setAlbumCompletion({ status: "idle" })}
-                      className="text-xs text-zinc-600 underline underline-offset-4 hover:text-zinc-300 transition-colors"
-                    >
-                      OK
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-xs text-zinc-500">
-                      {t.albumTracksOwned(albumTracks.length, albumCompletion.ytTracks.length)}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleDownloadMissing}
-                      className="rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-black hover:bg-zinc-200 transition-colors"
-                    >
-                      {t.downloadMissing(albumCompletion.missingTracks.length)}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setAlbumCompletion({ status: "idle" })}
-                      className="text-xs text-zinc-600 underline underline-offset-4 hover:text-zinc-300 transition-colors"
-                    >
-                      {t.cancel}
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
-            {albumCompletion.status === "downloading" && (
-              <span className="flex items-center gap-2 text-xs text-zinc-500">
-                <svg className="animate-spin shrink-0" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-                </svg>
-                {albumDownloadCount > 0
-                  ? t.albumDownloading(albumDownloadCount, albumCompletion.total)
-                  : t.searchingAlbum.replace("…", "...")}
-              </span>
-            )}
-            {albumCompletion.status === "done" && (
-              <div className="flex items-center gap-2">
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" className="text-green-400 shrink-0">
-                  <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
-                </svg>
-                <span className="text-xs text-green-400">{t.albumDownloadDone(albumCompletion.downloaded)}</span>
-                <button
-                  type="button"
-                  onClick={() => setAlbumCompletion({ status: "idle" })}
-                  className="text-xs text-zinc-600 underline underline-offset-4 hover:text-zinc-300 transition-colors"
-                >
-                  OK
-                </button>
-              </div>
-            )}
-            {albumCompletion.status === "error" && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-red-400">{albumCompletion.message}</span>
-                <button
-                  type="button"
-                  onClick={() => setAlbumCompletion({ status: "idle" })}
-                  className="text-xs text-zinc-600 underline underline-offset-4 hover:text-zinc-300 transition-colors"
-                >
-                  OK
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* YouTube tracklist preview */}
-          {albumCompletion.status === "found" && albumCompletion.missingTracks.length > 0 && (
-            <div className="mb-4 rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
-              <p className="mb-2 text-[10px] font-medium uppercase tracking-widest text-zinc-600">
-                YouTube
-              </p>
-              <ul className="space-y-1">
-                {albumCompletion.ytTracks.map((yt) => {
-                  const owned = isTrackOwned(yt.title, albumTracks);
-                  return (
-                    <li key={yt.id} className="flex items-center gap-2 text-xs">
-                      {owned ? (
-                        <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" className="text-green-400 shrink-0">
-                          <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
-                        </svg>
-                      ) : (
-                        <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" className="text-zinc-600 shrink-0">
-                          <path d="M8 1.5a.5.5 0 0 1 .5.5v5.5H14a.5.5 0 0 1 0 1H8.5V14a.5.5 0 0 1-1 0V8.5H2a.5.5 0 0 1 0-1h5.5V2a.5.5 0 0 1 .5-.5z" />
-                        </svg>
-                      )}
-                      <span className={owned ? "text-zinc-500" : "text-zinc-300"}>
-                        {yt.title}
-                      </span>
-                      {yt.duration != null && (
-                        <span className="ml-auto text-zinc-700 tabular-nums">
-                          {formatMsToClock(yt.duration * 1000)}
-                        </span>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          )}
-
           {/* Album track list */}
           <div className="mb-1 flex items-center gap-3 px-3">
             <span className="w-6" />
@@ -1176,7 +858,7 @@ export function LocalLibrarySection({ onToast }: { onToast?: (msg: string) => vo
 
           {/* Track list / empty state / no results */}
           {tracks.length === 0 ? (
-            <EmptyState onAdd={() => void pickAndImport()} />
+            <EmptyState />
           ) : filteredTracks.length === 0 ? (
             <NoResults query={query} onClear={() => setQuery("")} />
           ) : (

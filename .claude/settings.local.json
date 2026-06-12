@@ -21,7 +21,9 @@
       "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ./gradlew :app:assembleDebug)",
       "Bash(adb devices *)",
       "Bash(npm uninstall *)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(git rm *)"
     ]
   }
 }

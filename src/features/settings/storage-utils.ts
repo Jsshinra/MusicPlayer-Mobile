@@ -1,4 +1,5 @@
 import { Filesystem, Directory } from "@capacitor/filesystem";
+import { Capacitor } from "@capacitor/core";
 import type { Track, Playlist } from "../../shared/types/music";
 
 export const MUSIC_DIR = "music";
@@ -121,6 +122,57 @@ export async function deleteOrphans(paths: string[]): Promise<number> {
     }
   }
   return deleted;
+}
+
+/**
+ * Extracts the on-disk filename from either a raw file:// URI (track.localPath)
+ * or a Capacitor-rewritten WebView URL (track.artworkUrl —
+ * https://localhost/_capacitor_file_/.../artwork/<id>.<ext>). Both keep the
+ * original basename as the last path segment, which is exactly `<id>.<ext>`,
+ * i.e. the name we wrote inside MUSIC_DIR / ARTWORK_DIR.
+ */
+function uriBasename(uriOrUrl: string): string {
+  const noQuery = uriOrUrl.split("?")[0].split("#")[0];
+  const last = noQuery.split("/").pop() ?? "";
+  try {
+    return decodeURIComponent(last);
+  } catch {
+    return last;
+  }
+}
+
+/**
+ * Deletes a track's audio + artwork files from the Capacitor Data sandbox.
+ *
+ * On mobile this is the ONLY path that frees the bytes a track occupies — the
+ * desktop `window.libraryAPI.deleteFile` is a no-op stub here, so without this
+ * removed tracks would leak their files until the manual orphan cleanup runs.
+ * No-op on web/desktop, where deletion goes through the Electron main process.
+ */
+export async function deleteTrackFiles(track: Pick<Track, "localPath" | "artworkUrl">): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return;
+
+  if (track.localPath) {
+    const name = uriBasename(track.localPath);
+    if (name) {
+      try {
+        await Filesystem.deleteFile({ path: `${MUSIC_DIR}/${name}`, directory: Directory.Data });
+      } catch (err) {
+        console.warn(`[storage] failed to delete audio ${name}:`, err);
+      }
+    }
+  }
+
+  if (track.artworkUrl) {
+    const name = uriBasename(track.artworkUrl);
+    if (name) {
+      try {
+        await Filesystem.deleteFile({ path: `${ARTWORK_DIR}/${name}`, directory: Directory.Data });
+      } catch (err) {
+        console.warn(`[storage] failed to delete artwork ${name}:`, err);
+      }
+    }
+  }
 }
 
 export function formatBytes(n: number): string {

@@ -1,4 +1,5 @@
 import { useAppStore } from "../../../app/store/useAppStore";
+import { usePlaybackStore } from "../../../app/store/usePlaybackStore";
 import { playerOrchestrator } from "../../../core/player/player-orchestrator";
 import { formatMsToClock } from "../../../shared/utils/format-time";
 import type { Track } from "../../../shared/types/music";
@@ -140,7 +141,7 @@ export function QueueSection() {
   const queue = useAppStore((s) => s.queue);
   const currentQueueIndex = useAppStore((s) => s.currentQueueIndex);
   const currentTrack = useAppStore((s) => s.currentTrack);
-  const playbackState = useAppStore((s) => s.playbackState);
+  const playbackState = usePlaybackStore((s) => s.playbackState);
   const shuffleEnabled = useAppStore((s) => s.shuffleEnabled);
   const shuffleOrder = useAppStore((s) => s.shuffleOrder);
   const isPlaying = playbackState === "playing";

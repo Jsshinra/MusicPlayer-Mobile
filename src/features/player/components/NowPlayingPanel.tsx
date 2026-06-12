@@ -1,6 +1,7 @@
 import { ChangeEvent } from "react";
 import { playerOrchestrator } from "../../../core/player/player-orchestrator";
 import { useAppStore, type RepeatMode } from "../../../app/store/useAppStore";
+import { usePlaybackStore } from "../../../app/store/usePlaybackStore";
 import { formatMsToClock } from "../../../shared/utils/format-time";
 
 /* ── Icons ──────────────────────────────────────────────────────────────── */
@@ -101,9 +102,9 @@ function IconMusicNote() {
 
 export function NowPlayingPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const currentTrack   = useAppStore((s) => s.currentTrack);
-  const playbackState  = useAppStore((s) => s.playbackState);
-  const progressMs     = useAppStore((s) => s.progressMs);
-  const durationMs     = useAppStore((s) => s.durationMs);
+  const playbackState  = usePlaybackStore((s) => s.playbackState);
+  const progressMs     = usePlaybackStore((s) => s.progressMs);
+  const durationMs     = usePlaybackStore((s) => s.durationMs);
   const volume         = useAppStore((s) => s.volume);
   const currentQueueIndex = useAppStore((s) => s.currentQueueIndex);
   const shuffleEnabled = useAppStore((s) => s.shuffleEnabled);

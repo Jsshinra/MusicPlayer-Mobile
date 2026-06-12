@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { Filesystem, Directory } from "@capacitor/filesystem";
 import { useAppStore } from "../../../app/store/useAppStore";
+import { usePlaybackStore } from "../../../app/store/usePlaybackStore";
 import { localPathToFileUri } from "../../../shared/utils/local-file-uri";
 import { playerOrchestrator } from "../../../core/player/player-orchestrator";
 import { formatMsToClock } from "../../../shared/utils/format-time";
@@ -48,7 +49,7 @@ export function PlaylistDetailView({ playlistId, onBack }: Props) {
   const updatePlaylist = useAppStore((s) => s.updatePlaylist);
   const deletePlaylist = useAppStore((s) => s.deletePlaylist);
   const currentTrack = useAppStore((s) => s.currentTrack);
-  const playbackState = useAppStore((s) => s.playbackState);
+  const playbackState = usePlaybackStore((s) => s.playbackState);
   const appendToQueue = useAppStore((s) => s.appendToQueue);
 
 

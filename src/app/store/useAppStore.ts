@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { SourceType, PlaybackState, Track, Playlist } from "../../shared/types/music";
+import { SourceType, Track, Playlist } from "../../shared/types/music";
 import { localPathToFileUri } from "../../shared/utils/local-file-uri";
 import { preferencesStorage } from "../../shared/native/preferences-storage";
 import type { Language } from "../../shared/i18n/translations";
@@ -23,15 +23,12 @@ export type PlaybackOrigin = 'library' | 'radio' | 'playlist' | 'queue' | null;
 
 interface AppState {
   source: SourceType;
-  playbackState: PlaybackState;
   currentTrack: Track | null;
   libraryTracks: Track[];
   queue: Track[];
   currentQueueIndex: number;
   shuffleOrder: number[];
   shuffleHistory: number[];
-  progressMs: number;
-  durationMs: number;
   volume: number;
   isVoiceListening: boolean;
   recentTracks: Track[];
@@ -66,7 +63,6 @@ interface AppState {
   radioDownloadedTrackIds: string[];
 
   setSource: (source: SourceType) => void;
-  setPlaybackState: (state: PlaybackState) => void;
   setCurrentTrack: (track: Track | null) => void;
   setLibraryTracks: (tracks: Track[]) => void;
   appendLibraryTracks: (tracks: Track[]) => void;
@@ -77,8 +73,6 @@ interface AppState {
   setShuffleOrder: (order: number[]) => void;
   setShuffleHistory: (history: number[]) => void;
   setCurrentQueueIndex: (index: number) => void;
-  setProgressMs: (progressMs: number) => void;
-  setDurationMs: (durationMs: number) => void;
   setVolume: (volume: number) => void;
   setIsVoiceListening: (isListening: boolean) => void;
   addRecentTrack: (track: Track) => void;
@@ -122,15 +116,12 @@ export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
       source: "local",
-      playbackState: "idle",
       currentTrack: null,
       libraryTracks: [],
       queue: [],
       currentQueueIndex: -1,
       shuffleOrder: [],
       shuffleHistory: [],
-      progressMs: 0,
-      durationMs: 0,
       volume: 100,
       isVoiceListening: false,
       recentTracks: [],
@@ -162,7 +153,6 @@ export const useAppStore = create<AppState>()(
       radioDownloadedTrackIds: [],
  
       setSource: (source) => set({ source }),
-      setPlaybackState: (playbackState) => set({ playbackState }),
       setCurrentTrack: (currentTrack) => set({ currentTrack }),
       setLibraryTracks: (libraryTracks) => set({ libraryTracks }),
       removeLibraryTracks: (ids) =>
@@ -215,8 +205,6 @@ export const useAppStore = create<AppState>()(
       setCurrentQueueIndex: (currentQueueIndex) => set({ currentQueueIndex }),
       setShuffleOrder: (shuffleOrder) => set({ shuffleOrder }),
       setShuffleHistory: (shuffleHistory) => set({ shuffleHistory }),
-      setProgressMs: (progressMs) => set({ progressMs }),
-      setDurationMs: (durationMs) => set({ durationMs }),
       setVolume: (volume) => set({ volume }),
       setIsVoiceListening: (isVoiceListening) => set({ isVoiceListening }),
  
@@ -423,9 +411,6 @@ export const useAppStore = create<AppState>()(
             appLanguage: (typedPersisted.appLanguage === 'en' || typedPersisted.appLanguage === 'es')
               ? typedPersisted.appLanguage
               : currentState.appLanguage,
-            playbackState: "idle",
-            progressMs: 0,
-            durationMs: 0,
           };
         } catch (err) {
           console.error("[store] merge failed, using current state:", err);

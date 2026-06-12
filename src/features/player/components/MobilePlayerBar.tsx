@@ -1,4 +1,5 @@
 import { useAppStore } from "../../../app/store/useAppStore";
+import { usePlaybackStore } from "../../../app/store/usePlaybackStore";
 import { playerOrchestrator } from "../../../core/player/player-orchestrator";
 
 function IconPlay() {
@@ -43,9 +44,9 @@ interface MobilePlayerBarProps {
 
 export function MobilePlayerBar({ onExpand }: MobilePlayerBarProps) {
   const currentTrack = useAppStore((s) => s.currentTrack);
-  const playbackState = useAppStore((s) => s.playbackState);
-  const progressMs = useAppStore((s) => s.progressMs);
-  const durationMs = useAppStore((s) => s.durationMs);
+  const playbackState = usePlaybackStore((s) => s.playbackState);
+  const progressMs = usePlaybackStore((s) => s.progressMs);
+  const durationMs = usePlaybackStore((s) => s.durationMs);
 
   const hasTrack = currentTrack !== null;
   const isPlaying = playbackState === "playing";

@@ -95,12 +95,14 @@ export async function findOrphans(
     }
   }
   for (const f of covers) {
-    // Playlist covers are saved as `<id>-<ts>.<ext>`; the ID is the part
-    // before the last dash.
+    // Covers come in two on-disk formats: `<id>.<ext>` (wifi-import) and
+    // `<id>-<ts>.<ext>` (local cover picker). Playlist IDs are UUIDs and
+    // contain dashes themselves, so try both interpretations before
+    // declaring the file an orphan.
     const base = fileBaseId(f.name);
     const dash = base.lastIndexOf("-");
-    const id = dash > 0 ? base.slice(0, dash) : base;
-    if (!playlistIds.has(id)) {
+    const candidates = dash > 0 ? [base, base.slice(0, dash)] : [base];
+    if (!candidates.some((id) => playlistIds.has(id))) {
       orphans.push({ path: `${PLAYLIST_COVER_DIR}/${f.name}`, size: f.size });
     }
   }

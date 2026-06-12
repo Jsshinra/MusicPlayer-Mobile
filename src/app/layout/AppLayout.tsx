@@ -14,7 +14,9 @@ import { NowPlayingPanel } from "../../features/player/components/NowPlayingPane
 import { AmbientGlow } from "../../shared/components/AmbientGlow";
 import { BottomNav } from "./BottomNav";
 import { useAppStore } from "../store/useAppStore";
+import { usePlaybackStore } from "../store/usePlaybackStore";
 import { playerOrchestrator } from "../../core/player/player-orchestrator";
+import { handleBack } from "../../shared/utils/back-handler";
 
 export type ActiveView = "library" | "playlists" | "queue" | "playlist-detail" | "settings";
 
@@ -70,7 +72,7 @@ function AppLayoutInner() {
   const bgColor             = useAppStore((s) => s.bgColor)
   const fontScale           = useAppStore((s) => s.fontScale)
   const currentTrackForRpc  = useAppStore((s) => s.currentTrack)
-  const playbackStateForRpc = useAppStore((s) => s.playbackState)
+  const playbackStateForRpc = usePlaybackStore((s) => s.playbackState)
   const audioFocusEnabled   = useAppStore((s) => s.audioFocusEnabled)
 
   const handleViewChange = (view: ActiveView) => {
@@ -104,6 +106,7 @@ function AppLayoutInner() {
   // even if the on-screen close button is somehow non-tappable.
   useEffect(() => {
     const handle = CapacitorApp.addListener("backButton", () => {
+      if (handleBack()) return;
       if (isNowPlayingOpen) {
         setIsNowPlayingOpen(false);
         return;

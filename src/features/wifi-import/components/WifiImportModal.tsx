@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { App as CapacitorApp } from "@capacitor/app";
 import { QrScanner } from "./QrScanner";
+import { registerBackHandler } from "../../../shared/utils/back-handler";
 import { useWifiImport } from "../hooks/useWifiImport";
 import { isPairingPayload, type PairingPayload, type ShareManifest } from "../types";
 
@@ -33,12 +33,7 @@ export function WifiImportModal({ onClose, onToast }: Props) {
   const wifi = useWifiImport();
 
   // Hardware back button closes the modal regardless of stage.
-  useEffect(() => {
-    const handle = CapacitorApp.addListener("backButton", () => onClose());
-    return () => {
-      void handle.then((h) => h.remove());
-    };
-  }, [onClose]);
+  useEffect(() => registerBackHandler(onClose), [onClose]);
 
   async function handleScanResult(text: string) {
     if (stage.kind !== "scan") return;

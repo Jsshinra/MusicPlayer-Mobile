@@ -1,5 +1,6 @@
 import { CSSProperties } from "react";
 import { useAppStore } from "../../app/store/useAppStore";
+import { usePlaybackStore } from "../../app/store/usePlaybackStore";
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -25,7 +26,7 @@ function hexToRgba(hex: string, alpha: number): string {
  *  - keep the slow color transition so changing accent/vibe still feels smooth
  */
 export function AmbientGlow() {
-  const playbackState  = useAppStore((s) => s.playbackState);
+  const playbackState  = usePlaybackStore((s) => s.playbackState);
   const volume         = useAppStore((s) => s.volume);
   const vibeColor      = useAppStore((s) => s.vibeColor);
   const accentColor    = useAppStore((s) => s.accentColor);

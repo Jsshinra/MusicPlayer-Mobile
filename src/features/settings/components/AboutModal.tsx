@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { App as CapacitorApp } from '@capacitor/app'
 import { useTranslation } from '../../../shared/i18n/useTranslation'
+import { registerBackHandler } from '../../../shared/utils/back-handler'
 
 interface Props {
   onClose: () => void
@@ -36,16 +36,9 @@ export function AboutModal({ onClose }: Props) {
   }
 
   // Android hardware back closes the modal instead of exiting the app.
-  // Capacitor's listener stack means whichever modal registers last (this
-  // one, while it's open) wins, so the AppLayout-level handler doesn't fire.
-  useEffect(() => {
-    const handle = CapacitorApp.addListener('backButton', () => {
-      onClose()
-    })
-    return () => {
-      void handle.then((h) => h.remove())
-    }
-  }, [onClose])
+  // Registered on the shared back-handler stack so the topmost handler wins
+  // and AppLayout's global listener doesn't also fire (which would exit).
+  useEffect(() => registerBackHandler(onClose), [onClose])
 
   return createPortal(
     <div

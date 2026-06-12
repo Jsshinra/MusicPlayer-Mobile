@@ -1,4 +1,5 @@
 import { useAppStore } from "../../../app/store/useAppStore";
+import { usePlaybackStore } from "../../../app/store/usePlaybackStore";
 import { playerOrchestrator } from "../../../core/player/player-orchestrator";
 import type { Track } from "../../../shared/types/music";
 import { useTranslation } from "../../../shared/i18n/useTranslation";
@@ -102,7 +103,7 @@ export function RecentTracksSection() {
   const t = useTranslation();
   const recentTracks = useAppStore((s) => s.recentTracks);
   const currentTrack = useAppStore((s) => s.currentTrack);
-  const playbackState = useAppStore((s) => s.playbackState);
+  const playbackState = usePlaybackStore((s) => s.playbackState);
   const clearRecentTracks = useAppStore((s) => s.clearRecentTracks);
   const libraryTracks = useAppStore((s) => s.libraryTracks);
 

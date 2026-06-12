@@ -1,4 +1,5 @@
 import { useAppStore } from "../../app/store/useAppStore";
+import { usePlaybackStore } from "../../app/store/usePlaybackStore";
 import { SourceType, Track, PlaybackState } from "../../shared/types/music";
 import { MusicProvider } from "./music-provider";
 
@@ -128,9 +129,10 @@ export class PlayerOrchestrator {
     } else if (previousProviderTrackId !== null) {
       store.setCurrentTrack(null);
     }
-    store.setPlaybackState(playbackState);
-    store.setProgressMs(progressMs);
-    store.setDurationMs(durationMs);
+    const playbackStore = usePlaybackStore.getState();
+    playbackStore.setPlaybackState(playbackState);
+    playbackStore.setProgressMs(progressMs);
+    playbackStore.setDurationMs(durationMs);
 
     // Registrar en recientes cuando cambia el track y está reproduciendo
     const trackChanged = currentTrack !== null && previousStoreTrack?.id !== currentTrack.id;
@@ -212,7 +214,7 @@ export class PlayerOrchestrator {
   private tryCrossfade(progressMs: number, durationMs: number): void {
     const store = useAppStore.getState();
     const crossfadeDurationMs = store.crossfadeDuration * 1000;
-    if (crossfadeDurationMs <= 0 || durationMs <= 0 || store.playbackState !== "playing") return;
+    if (crossfadeDurationMs <= 0 || durationMs <= 0 || usePlaybackStore.getState().playbackState !== "playing") return;
 
     // Only crossfade if song is longer than 2x the crossfade duration
     if (durationMs < crossfadeDurationMs * 2) return;
@@ -335,9 +337,10 @@ export class PlayerOrchestrator {
 
       store.setCurrentQueueIndex(-1);
       store.setCurrentTrack(null);
-      store.setPlaybackState("idle");
-      store.setProgressMs(0);
-      store.setDurationMs(0);
+      const playbackStore = usePlaybackStore.getState();
+      playbackStore.setPlaybackState("idle");
+      playbackStore.setProgressMs(0);
+      playbackStore.setDurationMs(0);
       return;
     }
 
@@ -431,9 +434,10 @@ export class PlayerOrchestrator {
     this.stopSyncLoop();
     const store = useAppStore.getState();
     store.setCurrentTrack(null);
-    store.setPlaybackState('idle');
-    store.setProgressMs(0);
-    store.setDurationMs(0);
+    const playbackStore = usePlaybackStore.getState();
+    playbackStore.setPlaybackState('idle');
+    playbackStore.setProgressMs(0);
+    playbackStore.setDurationMs(0);
   }
 
   public async previous(): Promise<void> {
@@ -514,11 +518,12 @@ export class PlayerOrchestrator {
 
     const store = useAppStore.getState();
     store.setCurrentTrack(null);
-    store.setPlaybackState("idle");
     store.setQueue([]);
     store.setCurrentQueueIndex(-1);
-    store.setProgressMs(0);
-    store.setDurationMs(0);
+    const playbackStore = usePlaybackStore.getState();
+    playbackStore.setPlaybackState("idle");
+    playbackStore.setProgressMs(0);
+    playbackStore.setDurationMs(0);
   }
 }
 

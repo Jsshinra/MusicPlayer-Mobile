@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppStore } from "../../../app/store/useAppStore";
+import { usePlaybackStore } from "../../../app/store/usePlaybackStore";
 import { useLocalLibrary } from "../hooks/useLocalLibrary";
 import type { Track } from "../../../shared/types/music";
 import { useTranslation } from "../../../shared/i18n/useTranslation";
@@ -496,7 +497,7 @@ type LibraryTab = "songs" | "artists" | "albums";
 export function LocalLibrarySection({ onToast }: { onToast?: (msg: string) => void }) {
   const t = useTranslation();
   const currentTrack = useAppStore((s) => s.currentTrack);
-  const playbackState = useAppStore((s) => s.playbackState);
+  const playbackState = usePlaybackStore((s) => s.playbackState);
   const uiDensity = useAppStore((s) => s.uiDensity);
   const showAlbumCovers = useAppStore((s) => s.showAlbumCovers);
   const appendToQueue = useAppStore((s) => s.appendToQueue);

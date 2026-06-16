@@ -227,6 +227,9 @@ export class PlayerOrchestrator {
     if (this.crossfadeTriggeredAt !== null && now - this.crossfadeTriggeredAt < crossfadeDurationMs + 1000) return;
 
     const { queue, currentQueueIndex, repeatMode } = store;
+    // With "repeat one", let the track play out — tryAutoplayNextOnTrackEnd
+    // replays it. Crossfading here would skip to the next track instead.
+    if (repeatMode === "one") return;
     const nextIndex = currentQueueIndex + 1;
     const hasNext = nextIndex < queue.length || (repeatMode === "all" && queue.length > 0);
     if (!hasNext) return;

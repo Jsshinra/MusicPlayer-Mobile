@@ -14,6 +14,17 @@ const MUSIC_DIR = "music";
 const ARTWORK_DIR = "artwork";
 const PLAYLIST_COVER_DIR = "playlist-covers";
 
+// Manifest IDs and Content-Types come from the (untrusted) desktop server and
+// both get interpolated into Filesystem paths. Reject anything that could climb
+// out of the target directory — path traversal from a tampered QR/server.
+const SAFE_ID = /^[A-Za-z0-9._-]+$/;
+function isSafeId(id: string): boolean {
+  return SAFE_ID.test(id) && !id.includes("..");
+}
+function safeExt(mimeType: string): string {
+  return mimeType.split("/")[1]?.match(/[a-z0-9]+/i)?.[0] ?? "jpg";
+}
+
 export interface TransferProgress {
   /** Number of tracks completed (including skipped). */
   completed: number;
@@ -47,7 +58,8 @@ function buildUrl(p: PairingPayload, path: string, query: Record<string, string>
 
 async function fetchAndStream(url: string): Promise<Blob> {
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+  // Don't include the URL — it carries the pairing token in its query string.
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return await res.blob();
 }
 
@@ -135,6 +147,7 @@ export function useWifiImport() {
         }
 
         try {
+          if (!isSafeId(t.id)) throw new Error(`unsafe track id: ${t.id}`);
           // Download audio
           const audioBlob = await fetchAndStream(buildUrl(pairing, `/api/track/${encodeURIComponent(t.id)}`));
           const audioBase64 = await blobToBase64(audioBlob);
@@ -150,7 +163,7 @@ export function useWifiImport() {
           if (t.hasArtwork) {
             try {
               const artBlob = await fetchAndStream(buildUrl(pairing, `/api/artwork/${encodeURIComponent(t.id)}`));
-              const artExt = artBlob.type.split("/")[1] || "jpg";
+              const artExt = safeExt(artBlob.type);
               const artBase64 = await blobToBase64(artBlob);
               const artRes = await Filesystem.writeFile({
                 path: `${ARTWORK_DIR}/${t.id}.${artExt}`,
@@ -194,6 +207,10 @@ export function useWifiImport() {
         selectedPlaylistIds.includes(p.id),
       );
       for (const incoming of selectedPlaylists) {
+        if (!isSafeId(incoming.id)) {
+          console.warn(`[wifi-import] skipping playlist with unsafe id: ${incoming.id}`);
+          continue;
+        }
         // Try to pull the cover file too. Best-effort: playlist still imports if it fails.
         let coverPath: string | undefined;
         if (incoming.hasCover) {
@@ -201,7 +218,7 @@ export function useWifiImport() {
             const coverBlob = await fetchAndStream(
               buildUrl(pairing, `/api/playlist-cover/${encodeURIComponent(incoming.id)}`),
             );
-            const ext = coverBlob.type.split("/")[1] || "jpg";
+            const ext = safeExt(coverBlob.type);
             const coverBase64 = await blobToBase64(coverBlob);
             const coverRes = await Filesystem.writeFile({
               path: `${PLAYLIST_COVER_DIR}/${incoming.id}.${ext}`,

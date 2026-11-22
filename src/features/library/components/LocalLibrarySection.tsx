@@ -7,6 +7,39 @@ import { useTranslation } from "../../../shared/i18n/useTranslation";
 
 /* ── Icons ─────────────────────────────────────────────────── */
 
+function IconHeart({ filled }: { filled: boolean }) {
+  return filled ? (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+      <path d="M8 1.314C12.438-3.248 23.534 4.735 8 15-7.534 4.736 3.562-3.248 8 1.314z" />
+    </svg>
+  ) : (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+      <path d="m8 2.748-.717-.737C5.6.281 2.514.878 1.4 3.053c-.523 1.023-.641 2.5.314 4.385.92 1.815 2.834 3.989 6.286 6.357 3.452-2.368 5.365-4.542 6.286-6.357.955-1.886.838-3.362.314-4.385C13.486.878 10.4.28 8.717 2.01L8 2.748zM8 15C-7.333 4.868 3.279-3.04 7.824 1.143c.06.055.119.112.176.171a3.12 3.12 0 0 1 .176-.17C12.72-3.042 23.333 4.867 8 15z" />
+    </svg>
+  );
+}
+
+/** Heart toggle shown on every track row. */
+function FavoriteButton({ trackId }: { trackId: string }) {
+  const t = useTranslation();
+  const isFavorite = useAppStore((s) => s.favoriteTrackIds.includes(trackId));
+  const toggleFavorite = useAppStore((s) => s.toggleFavorite);
+  return (
+    <button
+      type="button"
+      onClick={(e) => { e.stopPropagation(); toggleFavorite(trackId); }}
+      aria-label={isFavorite ? t.removeFavorite : t.addFavorite}
+      aria-pressed={isFavorite}
+      className={[
+        "flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors",
+        isFavorite ? "text-rose-400" : "text-zinc-600 active:text-zinc-300",
+      ].join(" ")}
+    >
+      <IconHeart filled={isFavorite} />
+    </button>
+  );
+}
+
 function IconPlay() {
   return (
     <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
@@ -441,6 +474,8 @@ function TrackRow({
         {/* Kebab menu (mobile-friendly replacement for the desktop hover
             actions). Contains queue, playlist, and remove. SetAlbumButton
             isn't included because writeAlbumTag is a no-op stub on mobile. */}
+        <FavoriteButton trackId={track.id} />
+
         <TrackRowMenu
           track={track}
           onAddToQueue={onAddToQueue}
@@ -492,7 +527,7 @@ function NoResults({ query, onClear }: { query: string; onClear: () => void }) {
 
 /* ── Main section ──────────────────────────────────────────── */
 
-type LibraryTab = "songs" | "artists" | "albums";
+type LibraryTab = "songs" | "favorites" | "artists" | "albums";
 
 export function LocalLibrarySection({ onToast }: { onToast?: (msg: string) => void }) {
   const t = useTranslation();
@@ -511,6 +546,15 @@ export function LocalLibrarySection({ onToast }: { onToast?: (msg: string) => vo
   const [selectedArtist, setSelectedArtist] = useState<string | null>(null);
   const [selectedAlbum, setSelectedAlbum] = useState<string | null>(null);
   const showToast = (message: string) => onToast?.(message);
+  const favoriteTrackIds = useAppStore((s) => s.favoriteTrackIds);
+
+  // Favorites in the order they were marked; songs not on the phone are skipped
+  const favoriteTracks = useMemo(() => {
+    const byId = new Map(tracks.map((tr) => [tr.id, tr]));
+    return favoriteTrackIds
+      .map((id) => byId.get(id))
+      .filter((tr): tr is Track => Boolean(tr));
+  }, [tracks, favoriteTrackIds]);
 
   const filteredTracks = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -655,6 +699,8 @@ export function LocalLibrarySection({ onToast }: { onToast?: (msg: string) => vo
               ? `${albumArtist} · ${t.trackCount(albumTracks.length)}`
               : activeTab === "albums"
               ? t.albumCount(albumGroups.length)
+              : activeTab === "favorites"
+              ? t.trackCount(favoriteTracks.length)
               : t.trackCount(tracks.length)}
           </p>
         </div>
@@ -674,6 +720,19 @@ export function LocalLibrarySection({ onToast }: { onToast?: (msg: string) => vo
                 ].join(" ")}
               >
                 {t.songs}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTabChange("favorites")}
+                aria-label={t.favorites}
+                className={[
+                  "rounded px-2.5 py-1 text-xs font-medium transition-colors",
+                  activeTab === "favorites"
+                    ? "bg-zinc-700 text-rose-300"
+                    : "text-zinc-500 hover:text-zinc-300",
+                ].join(" ")}
+              >
+                ♥
               </button>
               <button
                 type="button"
@@ -813,6 +872,35 @@ export function LocalLibrarySection({ onToast }: { onToast?: (msg: string) => vo
             ))}
           </ul>
         </>
+      )}
+
+      {/* ── Favorites view ── */}
+      {activeTab === "favorites" && (
+        favoriteTracks.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-800 py-16 text-center">
+            <span className="mb-3 text-rose-400/70"><IconHeart filled /></span>
+            <p className="px-6 text-sm text-zinc-500">{t.noFavoritesYet}</p>
+          </div>
+        ) : (
+          <ul className="space-y-px">
+            {favoriteTracks.map((track, index) => (
+              <TrackRow
+                key={track.id}
+                track={track}
+                index={index}
+                isCurrentTrack={currentTrack?.id === track.id}
+                playbackState={playbackState}
+                compact={uiDensity === "compact"}
+                showCovers={showAlbumCovers}
+                unknownArtist={t.unknownArtist}
+                onPlay={(tr) => void playTrackFromPool(tr, favoriteTracks)}
+                onRemove={(tr) => { void removeTrackFromLibrary(tr); showToast(t.removedFromLibrary(tr.title)); }}
+                onAddToQueue={(tr) => { appendToQueue(tr); showToast(t.addedToQueue(tr.title)); }}
+                onToast={showToast}
+              />
+            ))}
+          </ul>
+        )
       )}
 
       {/* ── Songs view ── */}

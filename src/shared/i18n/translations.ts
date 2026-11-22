@@ -29,6 +29,10 @@ type Translations = {
   settings: string
   addSongs: string
   songs: string
+  favorites: string
+  noFavoritesYet: string
+  addFavorite: string
+  removeFavorite: string
   artists: string
   albums: string
   titleColumn: string
@@ -249,6 +253,10 @@ const es: Translations = {
   settings: 'Configuración',
   addSongs: 'Agregar canciones',
   songs: 'Canciones',
+  favorites: 'Favoritos',
+  noFavoritesYet: 'Tocá el corazón de una canción para guardarla acá',
+  addFavorite: 'Agregar a favoritos',
+  removeFavorite: 'Quitar de favoritos',
   artists: 'Artistas',
   albums: 'Álbumes',
   titleColumn: 'Título',
@@ -466,6 +474,10 @@ const en: Translations = {
   settings: 'Settings',
   addSongs: 'Add songs',
   songs: 'Songs',
+  favorites: 'Favorites',
+  noFavoritesYet: 'Tap the heart on a song to keep it here',
+  addFavorite: 'Add to favorites',
+  removeFavorite: 'Remove from favorites',
   artists: 'Artists',
   albums: 'Albums',
   titleColumn: 'Title',

@@ -138,6 +138,7 @@ export class PlayerOrchestrator {
     const trackChanged = currentTrack !== null && previousStoreTrack?.id !== currentTrack.id;
     if (trackChanged && playbackState === "playing") {
       store.addRecentTrack(currentTrack);
+      store.incrementPlayCount(currentTrack.id);
     }
 
     await this.tryAutoplayNextOnTrackEnd(previousProviderTrackId, currentTrack, playbackState);

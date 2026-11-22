@@ -9,6 +9,28 @@ import type {
   PairingPayload,
   ShareManifest,
 } from "../types";
+import type { SyncResponse } from "../sync-protocol";
+import { applySyncResponse, buildSyncRequest, type PhoneSyncState } from "../apply-sync";
+
+export interface SyncSummary {
+  favorites: number;
+  playlists: number;
+  /** Plays sent to the PC in this sync. */
+  playsSent: number;
+}
+
+function syncSlice(): PhoneSyncState {
+  const s = useAppStore.getState();
+  return {
+    favoriteTrackIds: s.favoriteTrackIds,
+    favoriteUpdatedAt: s.favoriteUpdatedAt,
+    playlists: s.playlists,
+    deletedPlaylists: s.deletedPlaylists,
+    playCounts: s.playCounts,
+    lastPlayedAt: s.lastPlayedAt,
+    syncedPlayCounts: s.syncedPlayCounts,
+  };
+}
 
 const MUSIC_DIR = "music";
 const ARTWORK_DIR = "artwork";
@@ -291,11 +313,19 @@ export function useWifiImport() {
         }
 
         if (existingIds.has(incoming.id)) {
-          updatePlaylist(incoming.id, {
-            name: incoming.name,
-            trackIds: incoming.trackIds,
-            ...(coverPath !== undefined ? { coverPath } : {}),
-          });
+          // Already synced — only touch it if something actually differs, so it
+          // doesn't get a newer updatedAt and override the PC on the next sync
+          const mine = playlists.find((p) => p.id === incoming.id);
+          const same = mine && mine.name === incoming.name &&
+            mine.trackIds.length === incoming.trackIds.length &&
+            mine.trackIds.every((id, i) => id === incoming.trackIds[i]);
+          if (!same || coverPath !== undefined) {
+            updatePlaylist(incoming.id, {
+              name: incoming.name,
+              trackIds: incoming.trackIds,
+              ...(coverPath !== undefined ? { coverPath } : {}),
+            });
+          }
         } else {
           createPlaylist(incoming.name, incoming.trackIds, coverPath, incoming.id);
         }
@@ -315,6 +345,31 @@ export function useWifiImport() {
     [libraryTracks, playlists, appendLibraryTracks, createPlaylist, updatePlaylist],
   );
 
+  /**
+   * Two-way sync of favorites, playlists and play counts with the PC.
+   * Returns null when the PC's Lumen is too old to support it (no /api/sync).
+   */
+  const sync = useCallback(async (pairing: PairingPayload): Promise<SyncSummary | null> => {
+    const sent = syncSlice();
+    const request = buildSyncRequest(sent);
+    const res = await fetch(buildUrl(pairing, "/api/sync"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+    });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`Sync HTTP ${res.status}`);
+    const response = (await res.json()) as SyncResponse;
+
+    const next = applySyncResponse(sent, syncSlice(), response);
+    useAppStore.getState().applySyncState(next);
+    return {
+      favorites: next.favoriteTrackIds?.length ?? 0,
+      playlists: next.playlists?.length ?? 0,
+      playsSent: Object.values(request.playCountDeltas).reduce((a, b) => a + b, 0),
+    };
+  }, []);
+
   const reset = useCallback(() => {
     setManifest(null);
     setProgress(INITIAL);
@@ -325,6 +380,7 @@ export function useWifiImport() {
     progress,
     fetchManifest,
     transfer,
+    sync,
     reset,
     isExistingTrackId: useCallback(
       (id: string): boolean => libraryTracks.some((t) => t.id === id),

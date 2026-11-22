@@ -36,6 +36,18 @@ interface AppState {
   shuffleEnabled: boolean;
   repeatMode: RepeatMode;
   playlists: Playlist[];
+  /** Track IDs the user has marked as favorite (order = when favorited). */
+  favoriteTrackIds: string[];
+  /** When each favorite was last marked/unmarked (ms) — decides conflicts in the WiFi sync. */
+  favoriteUpdatedAt: Record<string, number>;
+  /** How many times each track started playing. */
+  playCounts: Record<string, number>;
+  /** When each track last started playing (ms). */
+  lastPlayedAt: Record<string, number>;
+  /** playCounts as of the last successful sync — the difference is what gets sent to the PC. */
+  syncedPlayCounts: Record<string, number>;
+  /** Deleted playlist IDs → when (ms), so the PC's copy doesn't bring them back on sync. */
+  deletedPlaylists: Record<string, number>;
   voiceSearchEnabled: boolean;
   voiceSearchKey: string;
   voiceSearchLang: string;
@@ -84,6 +96,10 @@ interface AppState {
   appendTrackToPlaylist: (playlistId: string, trackId: string) => void;
   updatePlaylist: (id: string, updates: Partial<Pick<Playlist, 'name' | 'trackIds' | 'coverPath'>>) => void;
   deletePlaylist: (id: string) => void;
+  toggleFavorite: (id: string) => void;
+  incrementPlayCount: (id: string) => void;
+  /** Writes the state merged with the PC (see features/wifi-import/apply-sync.ts). */
+  applySyncState: (next: Partial<Pick<AppState, 'favoriteTrackIds' | 'favoriteUpdatedAt' | 'playlists' | 'deletedPlaylists' | 'playCounts' | 'lastPlayedAt' | 'syncedPlayCounts'>>) => void;
   setVoiceSearchEnabled: (enabled: boolean) => void;
   setVoiceSearchKey: (key: string) => void;
   setVoiceSearchLang: (lang: string) => void;
@@ -129,6 +145,12 @@ export const useAppStore = create<AppState>()(
       shuffleEnabled: false,
       repeatMode: "off" as RepeatMode,
       playlists: [],
+      favoriteTrackIds: [],
+      favoriteUpdatedAt: {},
+      playCounts: {},
+      lastPlayedAt: {},
+      syncedPlayCounts: {},
+      deletedPlaylists: {},
       voiceSearchEnabled: false,
       voiceSearchKey: 'v',
       voiceSearchLang: 'es-ES',
@@ -238,24 +260,43 @@ export const useAppStore = create<AppState>()(
         set((state) => ({
           playlists: [
             ...state.playlists,
-            { id: id ?? crypto.randomUUID(), name, trackIds, coverPath, createdAt: Date.now() },
+            { id: id ?? crypto.randomUUID(), name, trackIds, coverPath, createdAt: Date.now(), updatedAt: Date.now() },
           ],
         })),
 
       appendTrackToPlaylist: (playlistId, trackId) =>
         set((state) => ({
           playlists: state.playlists.map((p) =>
-            p.id === playlistId ? { ...p, trackIds: [...p.trackIds, trackId] } : p
+            p.id === playlistId ? { ...p, trackIds: [...p.trackIds, trackId], updatedAt: Date.now() } : p
           ),
         })),
 
       updatePlaylist: (id, updates) =>
         set((state) => ({
-          playlists: state.playlists.map((p) => (p.id === id ? { ...p, ...updates } : p)),
+          playlists: state.playlists.map((p) => (p.id === id ? { ...p, ...updates, updatedAt: Date.now() } : p)),
         })),
 
       deletePlaylist: (id) =>
-        set((state) => ({ playlists: state.playlists.filter((p) => p.id !== id) })),
+        set((state) => ({
+          playlists: state.playlists.filter((p) => p.id !== id),
+          deletedPlaylists: { ...state.deletedPlaylists, [id]: Date.now() },
+        })),
+
+      toggleFavorite: (id) =>
+        set((state) => ({
+          favoriteTrackIds: state.favoriteTrackIds.includes(id)
+            ? state.favoriteTrackIds.filter((fid) => fid !== id)
+            : [...state.favoriteTrackIds, id],
+          favoriteUpdatedAt: { ...state.favoriteUpdatedAt, [id]: Date.now() },
+        })),
+
+      incrementPlayCount: (id) =>
+        set((state) => ({
+          playCounts: { ...state.playCounts, [id]: (state.playCounts[id] ?? 0) + 1 },
+          lastPlayedAt: { ...state.lastPlayedAt, [id]: Date.now() },
+        })),
+
+      applySyncState: (next) => set(next),
 
       setVoiceSearchEnabled: (voiceSearchEnabled) => set({ voiceSearchEnabled }),
       setVoiceSearchKey: (voiceSearchKey) => set({ voiceSearchKey }),
@@ -339,6 +380,12 @@ export const useAppStore = create<AppState>()(
           shuffleEnabled: state.shuffleEnabled,
           repeatMode: state.repeatMode,
           playlists: state.playlists,
+          favoriteTrackIds: state.favoriteTrackIds,
+          favoriteUpdatedAt: state.favoriteUpdatedAt,
+          playCounts: state.playCounts,
+          lastPlayedAt: state.lastPlayedAt,
+          syncedPlayCounts: state.syncedPlayCounts,
+          deletedPlaylists: state.deletedPlaylists,
           voiceSearchEnabled: state.voiceSearchEnabled,
           voiceSearchKey: state.voiceSearchKey,
           voiceSearchLang: state.voiceSearchLang,
@@ -359,8 +406,8 @@ export const useAppStore = create<AppState>()(
         };
       },
       merge: (persistedState, currentState) => {
+        const typedPersisted = (persistedState as Partial<AppState>) ?? {};
         try {
-          const typedPersisted = (persistedState as Partial<AppState>) ?? {};
 
           const migrateId = (id: string): string => {
             try {
@@ -413,8 +460,23 @@ export const useAppStore = create<AppState>()(
               : currentState.appLanguage,
           };
         } catch (err) {
-          console.error("[store] merge failed, using current state:", err);
-          return currentState;
+          // Tracks failed to rehydrate — still keep the irreplaceable user data
+          // instead of falling back to an empty store (which would then be
+          // persisted over the real one on the next write).
+          console.error("[store] track merge failed, keeping user data:", err);
+          const keep = <K extends keyof AppState>(key: K, valid: (v: unknown) => boolean): Partial<AppState> =>
+            valid(typedPersisted[key]) ? { [key]: typedPersisted[key] } as Partial<AppState> : {};
+          const isObj = (v: unknown) => typeof v === "object" && v !== null && !Array.isArray(v);
+          return {
+            ...currentState,
+            ...keep("playlists", Array.isArray),
+            ...keep("favoriteTrackIds", Array.isArray),
+            ...keep("favoriteUpdatedAt", isObj),
+            ...keep("playCounts", isObj),
+            ...keep("lastPlayedAt", isObj),
+            ...keep("syncedPlayCounts", isObj),
+            ...keep("deletedPlaylists", isObj),
+          };
         }
       },
     }

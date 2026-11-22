@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { QrScanner } from "./QrScanner";
 import { registerBackHandler } from "../../../shared/utils/back-handler";
-import { useWifiImport } from "../hooks/useWifiImport";
+import { useWifiImport, type SyncSummary } from "../hooks/useWifiImport";
 import { isPairingPayload, type PairingPayload, type ShareManifest } from "../types";
 
 interface Props {
@@ -13,7 +13,7 @@ interface Props {
 type Stage =
   | { kind: "scan" }
   | { kind: "connecting"; pairing: PairingPayload }
-  | { kind: "select"; pairing: PairingPayload; manifest: ShareManifest }
+  | { kind: "select"; pairing: PairingPayload; manifest: ShareManifest; sync: SyncSummary | null; syncError?: string }
   | { kind: "transferring" }
   | { kind: "done" }
   | { kind: "error"; message: string };
@@ -50,6 +50,15 @@ export function WifiImportModal({ onClose, onToast }: Props) {
     }
     setStage({ kind: "connecting", pairing: payload });
     try {
+      // Sync favorites / playlists / plays first, then read the manifest so it
+      // reflects the merged state. A sync failure doesn't block importing.
+      let sync: SyncSummary | null = null;
+      let syncError: string | undefined;
+      try {
+        sync = await wifi.sync(payload);
+      } catch (err) {
+        syncError = (err as Error).message;
+      }
       const manifest = await wifi.fetchManifest(payload);
       // Pre-select everything that isn't already on the device.
       const initialTracks = new Set<string>();
@@ -62,7 +71,7 @@ export function WifiImportModal({ onClose, onToast }: Props) {
       }
       setSelectedTracks(initialTracks);
       setSelectedPlaylists(initialPlaylists);
-      setStage({ kind: "select", pairing: payload, manifest });
+      setStage({ kind: "select", pairing: payload, manifest, sync, syncError });
     } catch (err) {
       setStage({
         kind: "error",
@@ -184,6 +193,17 @@ export function WifiImportModal({ onClose, onToast }: Props) {
             <div className="flex flex-col items-center justify-center py-10 gap-2">
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-700 border-t-white" />
               <p className="text-sm text-zinc-400">Conectando a {stage.pairing.name}…</p>
+            </div>
+          )}
+
+          {stage.kind === "select" && (stage.sync || stage.syncError) && (
+            <div className={[
+              "mb-4 rounded-lg border px-3 py-2 text-xs",
+              stage.syncError ? "border-red-900/60 text-red-300" : "border-zinc-800 text-zinc-400",
+            ].join(" ")}>
+              {stage.syncError
+                ? `No se pudo sincronizar: ${stage.syncError}`
+                : `Sincronizado con ${stage.pairing.name}: ${stage.sync!.favorites} favoritos · ${stage.sync!.playlists} playlists${stage.sync!.playsSent > 0 ? ` · ${stage.sync!.playsSent} reproducciones enviadas` : ""}`}
             </div>
           )}
 

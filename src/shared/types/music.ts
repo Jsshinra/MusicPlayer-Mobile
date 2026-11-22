@@ -20,4 +20,6 @@ export interface Playlist {
   trackIds: string[];
   coverPath?: string;
   createdAt: number;
+  /** Last change to name/tracks (ms) — decides conflicts in the WiFi sync. */
+  updatedAt?: number;
 }

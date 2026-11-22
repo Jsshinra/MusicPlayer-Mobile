@@ -17,10 +17,70 @@ const PLAYLIST_COVER_DIR = "playlist-covers";
 // Manifest IDs and Content-Types come from the (untrusted) desktop server and
 // both get interpolated into Filesystem paths. Reject anything that could climb
 // out of the target directory — path traversal from a tampered QR/server.
-const SAFE_ID = /^[A-Za-z0-9._-]+$/;
+
+// Security check: block only genuine path-traversal attempts.
+// The original regex allowlist was too strict — it rejected track IDs that
+// include the full Windows file path (spaces, colons, backslashes, etc.).
 function isSafeId(id: string): boolean {
-  return SAFE_ID.test(id) && !id.includes("..");
+  if (!id || id.length > 500) return false;
+  // Normalize to forward slashes and reject any ".." path segment.
+  return !id.replace(/\\/g, "/").split("/").some((seg) => seg === "..");
 }
+
+// cyrb53 — small, synchronous 53-bit string hash. Only used to tell IDs apart
+// in filenames, not for security.
+function hashId(str: string): string {
+  let h1 = 0xdeadbeef;
+  let h2 = 0x41c6ce57;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507);
+  h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507);
+  h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+}
+
+// Converts a track/playlist ID into a filename that is safe on Android's
+// filesystem AND unique per ID. Desktop track IDs are full paths
+// ("local-C:\Users\...\Song.mp3"): only the file name is kept for readability,
+// sanitized and capped, plus a hash of the whole ID. Sanitizing/truncating
+// alone made different IDs collide ("a b" vs "a_b", long names sharing a
+// prefix) and one song overwrote the other on the phone.
+function idToFilename(id: string): string {
+  const baseName = id.split(/[\/\\]/).pop() ?? id;
+  const readable = baseName
+    .replace(/\.[a-z0-9]{2,5}$/i, "")
+    .replace(/[\/\\:*?"<>|\0]/g, "_")
+    .replace(/\s+/g, "_")
+    .slice(0, 80);
+  return `${readable || "track"}-${hashId(id)}`;
+}
+
+// Maps the Content-Type returned by the desktop server to a file extension.
+// audio/mpeg -> mp3, audio/mp4 -> m4a, audio/flac -> flac, etc.
+function audioExtFromMime(mimeType: string): string {
+  const base = (mimeType.split(";")[0] ?? "").trim().toLowerCase();
+  const EXT: Record<string, string> = {
+    "audio/mpeg":  "mp3",
+    "audio/mp3":   "mp3",
+    "audio/mp4":   "m4a",
+    "audio/x-m4a": "m4a",
+    "audio/aac":   "aac",
+    "audio/x-aac": "aac",
+    "audio/flac":  "flac",
+    "audio/x-flac":"flac",
+    "audio/ogg":   "ogg",
+    "audio/wav":   "wav",
+    "audio/x-wav": "wav",
+    "audio/webm":  "webm",
+  };
+  return EXT[base] ?? "mp3";
+}
+
 function safeExt(mimeType: string): string {
   return mimeType.split("/")[1]?.match(/[a-z0-9]+/i)?.[0] ?? "jpg";
 }
@@ -135,8 +195,6 @@ export function useWifiImport() {
         failed: 0,
       });
 
-      const newTracks: Track[] = [];
-
       for (let i = 0; i < tracksToFetch.length; i++) {
         const t = tracksToFetch[i];
         setProgress((prev) => ({ ...prev, completed: i, currentTitle: t.title }));
@@ -151,8 +209,9 @@ export function useWifiImport() {
           // Download audio
           const audioBlob = await fetchAndStream(buildUrl(pairing, `/api/track/${encodeURIComponent(t.id)}`));
           const audioBase64 = await blobToBase64(audioBlob);
+          const audioExt = audioExtFromMime(audioBlob.type);
           const audioRes = await Filesystem.writeFile({
-            path: `${MUSIC_DIR}/${t.id}.mp3`,
+            path: `${MUSIC_DIR}/${idToFilename(t.id)}.${audioExt}`,
             data: audioBase64,
             directory: Directory.Data,
             recursive: true,
@@ -166,7 +225,7 @@ export function useWifiImport() {
               const artExt = safeExt(artBlob.type);
               const artBase64 = await blobToBase64(artBlob);
               const artRes = await Filesystem.writeFile({
-                path: `${ARTWORK_DIR}/${t.id}.${artExt}`,
+                path: `${ARTWORK_DIR}/${idToFilename(t.id)}.${artExt}`,
                 data: artBase64,
                 directory: Directory.Data,
                 recursive: true,
@@ -178,7 +237,9 @@ export function useWifiImport() {
             }
           }
 
-          newTracks.push({
+          // Add each track as soon as it's on disk: if the app is closed halfway
+          // through a long transfer, what already downloaded stays in the library.
+          const track: Track = {
             id: t.id,
             source: "local",
             title: t.title,
@@ -188,16 +249,13 @@ export function useWifiImport() {
             uri: localPathToFileUri(audioRes.uri),
             localPath: audioRes.uri,
             artworkUrl,
-          });
+          };
+          appendLibraryTracks([track]);
           downloaded++;
         } catch (err) {
           console.error(`[wifi-import] failed track ${t.title}:`, err);
           failed++;
         }
-      }
-
-      if (newTracks.length > 0) {
-        appendLibraryTracks(newTracks);
       }
 
       // Merge playlists: update existing-by-id, create new ones.
@@ -221,7 +279,7 @@ export function useWifiImport() {
             const ext = safeExt(coverBlob.type);
             const coverBase64 = await blobToBase64(coverBlob);
             const coverRes = await Filesystem.writeFile({
-              path: `${PLAYLIST_COVER_DIR}/${incoming.id}.${ext}`,
+              path: `${PLAYLIST_COVER_DIR}/${idToFilename(incoming.id)}.${ext}`,
               data: coverBase64,
               directory: Directory.Data,
               recursive: true,

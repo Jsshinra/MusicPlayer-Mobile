@@ -105,3 +105,7 @@ JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" ./android/gradlew -p and
 ## Estado
 
 Proyecto personal en desarrollo activo (v0.1). Pendiente: auto-actualizador desde GitHub Releases y builds firmadas para distribución.
+
+## Licencia
+
+[MIT](LICENSE)
